@@ -7,6 +7,9 @@ import math
 import pandas as pd
 import numpy as np
 from hmmlearn import hmm
+from sklearn.decomposition import TruncatedSVD
+from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.metrics.pairwise import cosine_distances
 
 for path in ['../img', '../result']:
     if os.path.exists(path) == False:
@@ -76,9 +79,9 @@ def cat_to_idx_mapping(cat_list:list):
     
     return cat_to_idx_dict
 
-def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval):
+def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, dim):
     data = data.sort_values(by='start_time')
-    time_frame_to_enodeb_id_dict = {}
+    time_frame_to_enodebs_dict = {}
     enodeb_list = []
     output = {'time_frame_key':[], 'enodebs':[], 'signal':[]}
     
@@ -87,33 +90,44 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval):
         enodeb_list.append(start_enodeb)
         enodeb_list.append(end_enodeb)
 
-    enodeb_to_idx_dict = cat_to_idx_mapping(enodeb_list)
+    enodeb_to_idx_dict_for_plot = cat_to_idx_mapping(enodeb_list)
     
 
     for idx in data.index:
         key = mapping_time_frame_key(data['start_time'][idx], T_start, time_frame_interval)
-        if key in time_frame_to_enodeb_id_dict:
-            time_frame_to_enodeb_id_dict[key].update([
-                enodeb_to_idx_dict[data['start_enodeb_cell'][idx]], 
-                enodeb_to_idx_dict[data['end_enodeb_cell'][idx]]])
+        if key in time_frame_to_enodebs_dict:
+            time_frame_to_enodebs_dict[key].append(data['start_enodeb_cell'][idx])
+            time_frame_to_enodebs_dict[key].append(data['end_enodeb_cell'][idx])
             
         else:
-            time_frame_to_enodeb_id_dict[key] = set([
-                enodeb_to_idx_dict[data['start_enodeb_cell'][idx]],
-                enodeb_to_idx_dict[data['end_enodeb_cell'][idx]],
-            ])
+            time_frame_to_enodebs_dict[key] = [
+                data['start_enodeb_cell'][idx],
+                data['end_enodeb_cell'][idx],
+            ]
 
-    key_enodeb_id_list = [[key, list(time_frame_to_enodeb_id_dict[key])] for key in time_frame_to_enodeb_id_dict]
-    key_enodeb_id_list.sort()
+    key_enodebs_list = [[key, list(time_frame_to_enodebs_dict[key])] for key in time_frame_to_enodebs_dict]
+    co_occurrence_list = [i[1] for i in key_enodebs_list]
+    key_enodebs_list.sort()
+    
 
-    for idx in range(1, len(key_enodeb_id_list)):
-        time_frame_key, enodebs_idx_list = key_enodeb_id_list[idx]
+    enodeb_vectors_array, sorted_enodeb_array, enodeb_to_idx_dict = enodebs_vectoring(co_occurrence_list, 30)
+
+
+    for idx in range(1, len(key_enodebs_list)):
+        _,              T1_enodebs_list = key_enodebs_list[idx-1]
+        time_frame_key, T2_enodebs_list = key_enodebs_list[idx]
+        T1_enodeb_idx_array = np.array([enodeb_to_idx_dict[enodeb] for enodeb in T1_enodebs_list if enodeb in enodeb_to_idx_dict])
+        T2_enodeb_idx_array = np.array([enodeb_to_idx_dict[enodeb] for enodeb in T2_enodebs_list if enodeb in enodeb_to_idx_dict])
+        T1_mean_vector = np.mean(enodeb_vectors_array[T1_enodeb_idx_array], axis=0).reshape((1,-1))
+        T2_mean_vector = np.mean(enodeb_vectors_array[T2_enodeb_idx_array], axis=0).reshape((1,-1))
+        
+        distance = cosine_distances(T1_mean_vector, T2_mean_vector)[0,0]
 
         output['time_frame_key'].append(time_frame_key)
-        output['enodebs'].append(enodebs_idx_list)
-        output['signal'].append(np.mean(enodebs_idx_list) - np.mean(key_enodeb_id_list[idx-1][1]))
+        output['enodebs'].append(list(set(T2_enodebs_list)))
+        output['signal'].append(distance)
     
-    return pd.DataFrame(output), enodeb_to_idx_dict
+    return pd.DataFrame(output), enodeb_to_idx_dict_for_plot
 
 
 def mapping_time_frame_key(time_stamp, T_start, time_frame_interval):
@@ -126,3 +140,21 @@ def HMM_modeling(training_data):
     model.fit(np.array(training_data['signal']).reshape(-1,1))
 
     return model
+
+def enodebs_vectoring(co_occurrence_list:list, dim:int):
+    co_occurrence_list = [" ".join(enodebs_list) for enodebs_list in co_occurrence_list]
+    vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 1)
+    decomposition = TruncatedSVD(n_components = dim, n_iter = 60)
+    
+    tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
+    decomposition.fit(tfidf_scores)
+
+    vectors_array = decomposition.components_.T
+
+    sorted_enodeb_array = [[vectorizer.vocabulary_[i], i] for i in vectorizer.vocabulary_]
+    sorted_enodeb_array.sort()
+    sorted_enodeb_array = np.array([i[1] for i in sorted_enodeb_array])
+    enodeb_to_idx_dict = vectorizer.vocabulary_
+
+    return [vectors_array, sorted_enodeb_array, enodeb_to_idx_dict]
+
