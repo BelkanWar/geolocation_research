@@ -10,10 +10,10 @@ import matplotlib.pyplot as plt
 TIME_FRAME_INTERVAL = 180
 
 
-raw_data = utils.read_raw_data("../data/150_lte.csv")
+raw_data = utils.read_raw_data("../data/150men.csv")
 data = utils.data_parsing(raw_data)
-data = data.loc[data['start_time'] > datetime.datetime(2022, 9, 16, 5, 35)]
-data = data.loc[data['start_time'] < datetime.datetime(2022, 9, 16, 7, 35)]
+data = data.loc[data['start_time'] > datetime.datetime(2022, 9, 17)]
+data = data.loc[data['start_time'] < datetime.datetime(2022, 9, 20)]
 
 T_start, T_end = data['start_time'].min(), data['start_time'].max()
 time_frame_to_idx_dict = {
@@ -22,7 +22,7 @@ time_frame_to_idx_dict = {
 
 
 # training model
-training_data = utils.personal_data_processing(data.loc[data['imei']=='3556201001264401'], T_start, TIME_FRAME_INTERVAL)[0]
+training_data = utils.personal_data_processing(data.loc[data['imei']=='865030033912453'], T_start, TIME_FRAME_INTERVAL)[0]
 model = utils.HMM_modeling(training_data)
 
 for imei in set(list(data['imei'])):
