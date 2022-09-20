@@ -9,7 +9,7 @@ import seaborn as sns
 
 # parameters
 TIME_FRAME_INTERVAL = 180
-PCA_DIM = 30
+PCA_DIM = 10
 
 
 raw_data = utils.read_raw_data("../data/150men.csv")
