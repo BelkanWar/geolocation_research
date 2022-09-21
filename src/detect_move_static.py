@@ -22,40 +22,28 @@ data = utils.data_parsing(raw_data)
 data = data.loc[data['start_time'] > datetime.datetime(2022, 9, 17)]
 data = data.loc[data['start_time'] < datetime.datetime(2022, 9, 20)]
 
-T_start, T_end = data['start_time'].min(), data['start_time'].max()
-time_frame_to_idx_dict = {
-    T_start+datetime.timedelta(seconds=TIME_FRAME_INTERVAL*i):i 
-        for i in range(math.ceil((T_end-T_start).total_seconds()/TIME_FRAME_INTERVAL)+1)}
+# T_start, T_end = data['start_time'].min(), data['start_time'].max()
+# time_frame_to_idx_dict = {
+#     T_start+datetime.timedelta(seconds=TIME_FRAME_INTERVAL*i):i 
+#         for i in range(math.ceil((T_end-T_start).total_seconds()/TIME_FRAME_INTERVAL)+1)}
 
 
 # training model
-training_data = utils.personal_data_processing(data.loc[data['imei']==TRAINING_IMEI], T_start, TIME_FRAME_INTERVAL)[0]
-model = utils.HMM_modeling(training_data)
+# training_data = utils.personal_data_processing(data.loc[data['imei']==TRAINING_IMEI], T_start, TIME_FRAME_INTERVAL)[0]
+# model = utils.HMM_modeling(training_data)
 
 for imei in [TRAINING_IMEI] + list(set(list(data['imei']))):
-# for imei in [TRAINING_IMEI]:
-    personal_data, enodeb_to_idx_dict = utils.personal_data_processing(data.loc[data['imei']==imei], T_start, TIME_FRAME_INTERVAL)
+    subset = data.loc[data['imei']==imei]
+    subset = subset.sort_values(by='start_time')
+    subset['time_idx'] = [(subset['start_time'].tolist()[i] - subset['start_time'].tolist()[0]).total_seconds() for i in range(len(subset.index))]
     
-    try:
-        personal_data['status'] = model.predict(np.array(personal_data['signal']).reshape(-1,1)).tolist()
-        
-        image = np.zeros((len(enodeb_to_idx_dict), len(personal_data.index), 3))
-
-        for idx_idx in range(len(personal_data.index)):
-            idx = personal_data.index[idx_idx]
-            time_idx = time_frame_to_idx_dict[personal_data['time_frame_key'][idx]]
-            status = personal_data['status'][idx]
-            for enodeb_idx in personal_data['enodebs'][idx]:
-                image[enodeb_idx, idx_idx, status] = 1
-        
-        plt.imsave(f"../img/{imei}_pattern.png", image)
-        plt.plot()
-        sns.lineplot(data = {
-            'idx':[i for i in range(personal_data.shape[0])], 
-            'signal':personal_data['signal']}
-            , x='idx', y='signal')
-        plt.savefig(f"../img/{imei}_signal.png")
-        plt.close()
-    except Exception as error:
-        pass   
-
+    plt.plot()
+    sns.scatterplot(data=subset, x='time_idx', y='lat_first')
+    plt.savefig(f"../img/{imei}_lat.png")
+    plt.close()
+    plt.plot()
+    sns.scatterplot(data=subset, x='time_idx', y='lon_first')
+    plt.savefig(f"../img/{imei}_lon.png")
+    plt.close()
+    
+    
