@@ -8,8 +8,10 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # parameters
-TIME_FRAME_INTERVAL = 300
+TIME_FRAME_INTERVAL = 120
 PCA_DIM = 5
+TRAINING_IMEI = '510018335526102'
+['510018335526102', '510016935104469']
 
 for root, folder, files in os.walk("../img/"):
     for file in files:
@@ -28,26 +30,34 @@ time_frame_to_idx_dict = {
 
 
 # training model
-training_data = utils.personal_data_processing(data.loc[data['imei']=='510010766423020'], T_start, TIME_FRAME_INTERVAL)[0]
+training_data = utils.personal_data_processing(data.loc[data['imei']==TRAINING_IMEI], T_start, TIME_FRAME_INTERVAL)[0]
 model = utils.HMM_modeling(training_data)
 
-for imei in set(list(data['imei'])):
+for imei in [TRAINING_IMEI] + list(set(list(data['imei']))):
     try:
-        personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(data.loc[data['imei']==imei], T_start, TIME_FRAME_INTERVAL)
+        subset = data.loc[data['imei']==imei]
+        personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(subset, T_start, TIME_FRAME_INTERVAL)
 
         personal_data['status'] = model.predict(np.array(personal_data['signal']).reshape(-1,1)).tolist()
         
-        # image = np.zeros((len(enodeb_to_idx_dict_for_plot), len(time_frame_to_idx_dict), 3))
-        image = np.zeros((len(enodeb_to_idx_dict_for_plot), len(personal_data.index), 3))
+        orignal_pattern = np.zeros((len(enodeb_to_idx_dict_for_plot), len(time_frame_to_idx_dict), 3))
+        condense_pattern = np.zeros((len(enodeb_to_idx_dict_for_plot), len(personal_data.index), 3))
 
         for idx_idx in range(len(personal_data.index)):
             idx = personal_data.index[idx_idx]
             time_idx = time_frame_to_idx_dict[personal_data['time_frame_key'][idx]]
             status = personal_data['status'][idx]
             for enodeb in personal_data['enodebs'][idx]:
-                image[enodeb_to_idx_dict_for_plot[enodeb], idx_idx, status] = 1
+                orignal_pattern[enodeb_to_idx_dict_for_plot[enodeb], time_idx, status] = 1
+                condense_pattern[enodeb_to_idx_dict_for_plot[enodeb], idx_idx, status] = 1
         
-        plt.imsave(f"../img/{imei}_pattern.png", image)
+        subset['idx'] = [i for i in range(len(subset.index))]
+        plt.plot()
+        sns.scatterplot()
+
+
+        plt.imsave(f"../img/{imei}_original_pattern.png", orignal_pattern)
+        plt.imsave(f"../img/{imei}_condense_pattern.png", condense_pattern)
         plt.plot()
         sns.lineplot(data = {
             'idx':[i for i in range(personal_data.shape[0])], 
