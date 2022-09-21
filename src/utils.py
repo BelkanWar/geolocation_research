@@ -110,7 +110,7 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, di
     key_enodebs_list.sort()
     
 
-    enodeb_vectors_array, sorted_enodeb_array, enodeb_to_idx_dict = enodebs_vectoring(co_occurrence_list, 30)
+    enodeb_vectors_array, sorted_enodeb_array, enodeb_to_idx_dict = enodebs_vectoring(co_occurrence_list, dim)
     key_enodebs_list = [i for i in key_enodebs_list if len([j for j in i[1] if j in enodeb_to_idx_dict]) > 0]
 
     for idx in range(1, len(key_enodebs_list)):

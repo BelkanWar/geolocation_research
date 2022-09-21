@@ -9,7 +9,7 @@ import seaborn as sns
 
 # parameters
 TIME_FRAME_INTERVAL = 180
-PCA_DIM = 10
+PCA_DIM = 5
 
 
 raw_data = utils.read_raw_data("../data/150men.csv")
@@ -24,7 +24,7 @@ time_frame_to_idx_dict = {
 
 
 # training model
-training_data = utils.personal_data_processing(data.loc[data['imei']=='865030033912453'], T_start, TIME_FRAME_INTERVAL, PCA_DIM)[0]
+training_data = utils.personal_data_processing(data.loc[data['imei']=='510010766423020'], T_start, TIME_FRAME_INTERVAL, PCA_DIM)[0]
 model = utils.HMM_modeling(training_data)
 
 for imei in set(list(data['imei'])):
@@ -33,13 +33,15 @@ for imei in set(list(data['imei'])):
 
         personal_data['status'] = model.predict(np.array(personal_data['signal']).reshape(-1,1)).tolist()
         
-        image = np.zeros((len(enodeb_to_idx_dict_for_plot), len(time_frame_to_idx_dict), 3))
+        # image = np.zeros((len(enodeb_to_idx_dict_for_plot), len(time_frame_to_idx_dict), 3))
+        image = np.zeros((len(enodeb_to_idx_dict_for_plot), len(personal_data.index), 3))
 
-        for idx in personal_data.index:
+        for idx_idx in range(len(personal_data.index)):
+            idx = personal_data.index[idx_idx]
             time_idx = time_frame_to_idx_dict[personal_data['time_frame_key'][idx]]
             status = personal_data['status'][idx]
             for enodeb in personal_data['enodebs'][idx]:
-                image[enodeb_to_idx_dict_for_plot[enodeb], time_idx, status] = 1
+                image[enodeb_to_idx_dict_for_plot[enodeb], idx_idx, status] = 1
         
         plt.imsave(f"../img/{imei}_pattern.png", image)
         plt.plot()
