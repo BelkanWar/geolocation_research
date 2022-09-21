@@ -8,7 +8,9 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # parameters
-TIME_FRAME_INTERVAL = 180
+TIME_FRAME_INTERVAL = 120
+TRAINING_IMEI = '510016935104469'
+['510018335526102', '510016935104469']
 
 for root, folder, files in os.walk("../img/"):
     for file in files:
@@ -27,10 +29,11 @@ time_frame_to_idx_dict = {
 
 
 # training model
-training_data = utils.personal_data_processing(data.loc[data['imei']=='510013048436872'], T_start, TIME_FRAME_INTERVAL)[0]
+training_data = utils.personal_data_processing(data.loc[data['imei']==TRAINING_IMEI], T_start, TIME_FRAME_INTERVAL)[0]
 model = utils.HMM_modeling(training_data)
 
-for imei in set(list(data['imei'])):
+for imei in [TRAINING_IMEI] + list(set(list(data['imei']))):
+# for imei in [TRAINING_IMEI]:
     personal_data, enodeb_to_idx_dict = utils.personal_data_processing(data.loc[data['imei']==imei], T_start, TIME_FRAME_INTERVAL)
     
     try:

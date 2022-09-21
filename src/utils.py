@@ -122,7 +122,7 @@ def mapping_time_frame_key(time_stamp, T_start, time_frame_interval):
     return frame_key
 
 def HMM_modeling(training_data):
-    model = hmm.GaussianHMM(n_components=2, covariance_type="diag",n_iter=100, algorithm='viterbi', min_covar=0.001)
+    model = hmm.GaussianHMM(n_components=2, covariance_type="diag",n_iter=100, algorithm='viterbi', min_covar=0.01)
     model.fit(np.array(training_data['signal']).reshape(-1,1))
 
     return model
