@@ -7,7 +7,7 @@ import math
 import pandas as pd
 import numpy as np
 from hmmlearn import hmm
-from sklearn.decomposition import TruncatedSVD
+from sklearn.decomposition import TruncatedSVD, NMF
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_distances
 
@@ -79,7 +79,7 @@ def cat_to_idx_mapping(cat_list:list):
     
     return cat_to_idx_dict
 
-def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, dim):
+def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval):
     data = data.sort_values(by='start_time')
     time_frame_to_enodebs_dict = {}
     enodeb_list = []
@@ -110,7 +110,7 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, di
     key_enodebs_list.sort()
     
 
-    enodeb_vectors_array, sorted_enodeb_array, enodeb_to_idx_dict = enodebs_vectoring(co_occurrence_list, dim)
+    enodeb_vectors_array, enodeb_to_idx_dict = enodebs_vectoring(co_occurrence_list)
     key_enodebs_list = [i for i in key_enodebs_list if len([j for j in i[1] if j in enodeb_to_idx_dict]) > 0]
 
     for idx in range(1, len(key_enodebs_list)):
@@ -118,10 +118,10 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, di
         time_frame_key, T2_enodebs_list = key_enodebs_list[idx]
         T1_enodeb_idx_array = np.array([enodeb_to_idx_dict[enodeb] for enodeb in T1_enodebs_list if enodeb in enodeb_to_idx_dict])
         T2_enodeb_idx_array = np.array([enodeb_to_idx_dict[enodeb] for enodeb in T2_enodebs_list if enodeb in enodeb_to_idx_dict])
-        T1_mean_vector = np.mean(enodeb_vectors_array[T1_enodeb_idx_array], axis=0).reshape((1,-1))
-        T2_mean_vector = np.mean(enodeb_vectors_array[T2_enodeb_idx_array], axis=0).reshape((1,-1))
+        T1_vector_sum = np.mean(enodeb_vectors_array[T1_enodeb_idx_array], axis=0).reshape((1,-1))
+        T2_vector_sum = np.mean(enodeb_vectors_array[T2_enodeb_idx_array], axis=0).reshape((1,-1))
         
-        distance = cosine_distances(T1_mean_vector, T2_mean_vector)[0,0]
+        distance = cosine_distances(T1_vector_sum, T2_vector_sum)[0,0]
 
         output['time_frame_key'].append(time_frame_key)
         output['enodebs'].append(list(set(T2_enodebs_list)))
@@ -141,20 +141,21 @@ def HMM_modeling(training_data):
 
     return model
 
-def enodebs_vectoring(co_occurrence_list:list, dim:int):
+def enodebs_vectoring(co_occurrence_list:list):
     co_occurrence_list = [" ".join(enodebs_list) for enodebs_list in co_occurrence_list]
     vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 3)
-    decomposition = TruncatedSVD(n_components = dim, n_iter = 60)
-    
     tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
+
+    decomposition = TruncatedSVD(n_components = round(len(vectorizer.vocabulary_)/10), n_iter = 60)
+    # decomposition = NMF(n_components = round(len(vectorizer.vocabulary_)/10), init= 'random', max_iter = 400)
     decomposition.fit(tfidf_scores)
 
     vectors_array = decomposition.components_.T
 
-    sorted_enodeb_array = [[vectorizer.vocabulary_[i], i] for i in vectorizer.vocabulary_]
-    sorted_enodeb_array.sort()
-    sorted_enodeb_array = np.array([i[1] for i in sorted_enodeb_array])
+    # sorted_enodeb_array = [[vectorizer.vocabulary_[i], i] for i in vectorizer.vocabulary_]
+    # sorted_enodeb_array.sort()
+    # sorted_enodeb_array = np.array([i[1] for i in sorted_enodeb_array])
     enodeb_to_idx_dict = vectorizer.vocabulary_
 
-    return [vectors_array, sorted_enodeb_array, enodeb_to_idx_dict]
+    return [vectors_array, enodeb_to_idx_dict]
 

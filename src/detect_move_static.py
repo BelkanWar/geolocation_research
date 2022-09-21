@@ -8,8 +8,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # parameters
-TIME_FRAME_INTERVAL = 180
+TIME_FRAME_INTERVAL = 300
 PCA_DIM = 5
+
+for root, folder, files in os.walk("../img/"):
+    for file in files:
+        os.remove(os.path.join(root, file))
 
 
 raw_data = utils.read_raw_data("../data/150men.csv")
@@ -24,12 +28,12 @@ time_frame_to_idx_dict = {
 
 
 # training model
-training_data = utils.personal_data_processing(data.loc[data['imei']=='510010766423020'], T_start, TIME_FRAME_INTERVAL, PCA_DIM)[0]
+training_data = utils.personal_data_processing(data.loc[data['imei']=='510010766423020'], T_start, TIME_FRAME_INTERVAL)[0]
 model = utils.HMM_modeling(training_data)
 
 for imei in set(list(data['imei'])):
     try:
-        personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(data.loc[data['imei']==imei], T_start, TIME_FRAME_INTERVAL, PCA_DIM)
+        personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(data.loc[data['imei']==imei], T_start, TIME_FRAME_INTERVAL)
 
         personal_data['status'] = model.predict(np.array(personal_data['signal']).reshape(-1,1)).tolist()
         
