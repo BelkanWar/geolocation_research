@@ -5,9 +5,14 @@ import datetime
 import math
 import numpy as np
 import matplotlib.pyplot as plt
+import seaborn as sns
 
 # parameters
 TIME_FRAME_INTERVAL = 180
+
+for root, folder, files in os.walk("../img/"):
+    for file in files:
+        os.remove(os.path.join(root, file))
 
 
 raw_data = utils.read_raw_data("../data/150men.csv")
@@ -22,7 +27,7 @@ time_frame_to_idx_dict = {
 
 
 # training model
-training_data = utils.personal_data_processing(data.loc[data['imei']=='865030033912453'], T_start, TIME_FRAME_INTERVAL)[0]
+training_data = utils.personal_data_processing(data.loc[data['imei']=='510013048436872'], T_start, TIME_FRAME_INTERVAL)[0]
 model = utils.HMM_modeling(training_data)
 
 for imei in set(list(data['imei'])):
@@ -31,16 +36,23 @@ for imei in set(list(data['imei'])):
     try:
         personal_data['status'] = model.predict(np.array(personal_data['signal']).reshape(-1,1)).tolist()
         
-        image = np.zeros((len(enodeb_to_idx_dict), len(time_frame_to_idx_dict), 3))
+        image = np.zeros((len(enodeb_to_idx_dict), len(personal_data.index), 3))
 
-        for idx in personal_data.index:
+        for idx_idx in range(len(personal_data.index)):
+            idx = personal_data.index[idx_idx]
             time_idx = time_frame_to_idx_dict[personal_data['time_frame_key'][idx]]
             status = personal_data['status'][idx]
             for enodeb_idx in personal_data['enodebs'][idx]:
-                image[enodeb_idx, time_idx, status] = 1
+                image[enodeb_idx, idx_idx, status] = 1
         
-        plt.imsave(f"../img/{imei}.png", image)
-
+        plt.imsave(f"../img/{imei}_pattern.png", image)
+        plt.plot()
+        sns.lineplot(data = {
+            'idx':[i for i in range(personal_data.shape[0])], 
+            'signal':personal_data['signal']}
+            , x='idx', y='signal')
+        plt.savefig(f"../img/{imei}_signal.png")
+        plt.close()
     except Exception as error:
         pass   
 
