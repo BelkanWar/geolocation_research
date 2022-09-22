@@ -3,43 +3,68 @@ os.chdir(os.path.dirname(os.path.realpath(__file__)))
 import utils
 import datetime
 import math
+import csv
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 # parameters
-TIME_FRAME_INTERVAL = 120
+TIME_FRAME_INTERVAL = 300
 PCA_DIM = 5
-TRAINING_IMEI = '510018335526102'
-['510018335526102', '510016935104469']
+START_TIME = datetime.datetime(2022, 9, 17)
+END_TIME = datetime.datetime(2022, 9, 20)
+TRAINING_IMSI = '510018335526102'
+['510018335526102', '510016935104469', '510010444367250']
 
-for root, folder, files in os.walk("../img/"):
-    for file in files:
-        os.remove(os.path.join(root, file))
+# purge result folders
+for folder_path in ['../img/', '../result/']:
+    for root, folder, files in os.walk(folder_path):
+        for file in files:
+            os.remove(os.path.join(root, file))
 
 
-raw_data = utils.read_raw_data("../data/150men.csv")
-data = utils.data_parsing(raw_data)
-data = data.loc[data['start_time'] > datetime.datetime(2022, 9, 17)]
-data = data.loc[data['start_time'] < datetime.datetime(2022, 9, 20)]
+data = utils.data_parsing(utils.read_raw_data("../data/150men.csv"))
+data = data.loc[data['start_time'] > START_TIME]
+data = data.loc[data['start_time'] < END_TIME]
 
-T_start, T_end = data['start_time'].min(), data['start_time'].max()
+# time frame
 time_frame_to_idx_dict = {
-    T_start+datetime.timedelta(seconds=TIME_FRAME_INTERVAL*i):i 
-        for i in range(math.ceil((T_end-T_start).total_seconds()/TIME_FRAME_INTERVAL)+1)}
+    START_TIME+datetime.timedelta(seconds=TIME_FRAME_INTERVAL*i):i 
+        for i in range(math.ceil((END_TIME-START_TIME).total_seconds()/TIME_FRAME_INTERVAL)+1)}
 
 
-# training model
-training_data = utils.personal_data_processing(data.loc[data['imei']==TRAINING_IMEI], T_start, TIME_FRAME_INTERVAL)[0]
-model = utils.HMM_modeling(training_data)
+# training HMM model
+training_data = utils.personal_data_processing(data.loc[data['imsi']==TRAINING_IMSI], START_TIME, TIME_FRAME_INTERVAL)[0]
+model, reverse_switch = utils.HMM_modeling(training_data)
 
-for imei in [TRAINING_IMEI] + list(set(list(data['imei']))):
+# predict moving/static status
+with open("../result/output.csv", 'a') as f:
+    w =csv.writer(f)
+    w.writerow(data.columns.tolist() + ['moving_status'])
+
+for imsi in [TRAINING_IMSI] + list(set(list(data['imsi']))):
     try:
-        subset = data.loc[data['imei']==imei]
-        personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(subset, T_start, TIME_FRAME_INTERVAL)
+        subset = data.loc[data['imsi']==imsi]
+        subset = subset.sort_values(by='start_time')
+        personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(subset, START_TIME, TIME_FRAME_INTERVAL)
 
-        personal_data['status'] = model.predict(np.array(personal_data['signal']).reshape(-1,1)).tolist()
-        
+        # moving/static status
+        personal_data['status'] = utils.HMM_prediction(personal_data['signal'], model, reverse_switch)
+
+        # mapping the status back to original dataset
+        time_frame_key_to_status = {key:status for key, status in zip(personal_data['time_frame_key'], personal_data['status'])}
+
+        with open("../result/output.csv", 'a') as f:
+            w =csv.writer(f, delimiter='|')
+
+            for row_idx in subset.index:
+                key = utils.mapping_time_frame_key(subset.loc[row_idx, 'start_time'], START_TIME, TIME_FRAME_INTERVAL)
+                if key in time_frame_key_to_status:
+                    info = [subset.loc[row_idx, colname] for colname in subset.columns] + [time_frame_key_to_status[key]]
+                    w.writerow(info)
+            
+            
+        # result visualization
         orignal_pattern = np.zeros((len(enodeb_to_idx_dict_for_plot), len(time_frame_to_idx_dict), 3))
         condense_pattern = np.zeros((len(enodeb_to_idx_dict_for_plot), len(personal_data.index), 3))
 
@@ -51,21 +76,32 @@ for imei in [TRAINING_IMEI] + list(set(list(data['imei']))):
                 orignal_pattern[enodeb_to_idx_dict_for_plot[enodeb], time_idx, status] = 1
                 condense_pattern[enodeb_to_idx_dict_for_plot[enodeb], idx_idx, status] = 1
         
-        subset['idx'] = [i for i in range(len(subset.index))]
-        plt.plot()
-        sns.scatterplot()
+        subset['time_idx'] = [(subset['start_time'].tolist()[i]-START_TIME).total_seconds()/86400 for i in range(len(subset.index))]
+        fig, ax1 = plt.subplots()
+        ax1.scatter(subset['time_idx'], subset['lat_first'], color='blue')
+        ax1.set_ylabel("latitude")
+        ax1.legend(['latitude'], loc="upper left")
+        plt.xticks(rotation=30)
+        ax2 = ax1.twinx()
+        ax2.scatter(subset['time_idx'], subset['lon_first'], color='red')
+        ax2.set_ylabel("lontitude")
+        ax2.legend(['lontitude'], loc='upper right')
+        plt.savefig(f"../img/{imsi}_latlon.png")
+        plt.close()
 
 
-        plt.imsave(f"../img/{imei}_original_pattern.png", orignal_pattern)
-        plt.imsave(f"../img/{imei}_condense_pattern.png", condense_pattern)
+        plt.imsave(f"../img/{imsi}_original_pattern.png", orignal_pattern)
+        plt.imsave(f"../img/{imsi}_condense_pattern.png", condense_pattern)
         plt.plot()
         sns.lineplot(data = {
             'idx':[i for i in range(personal_data.shape[0])], 
             'signal':personal_data['signal']}
             , x='idx', y='signal')
-        plt.savefig(f"../img/{imei}_signal.png")
+        plt.savefig(f"../img/{imsi}_signal.png")
         plt.close()
 
     except Exception as error:
-        pass   
+        with open("../result/elimiated_imsi.csv", 'a') as f:
+            w = csv.writer(f)
+            w.writerow([imsi])
 

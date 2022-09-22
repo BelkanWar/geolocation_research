@@ -17,7 +17,7 @@ for path in ['../img', '../result']:
         os.mkdir(path)
 
 scheme = [
-    ['imei','str', True],
+    ['imsi','str', True],
     ['start_time', 'datetime', True],
     ['end_time', 'datetime', True],
     ['lat_first', 'float', True],
@@ -26,8 +26,8 @@ scheme = [
     ['lon_last', 'float', False], 
     ['moving', 'int', True], 
     ['indoor', 'int', True], 
-    ['start_call_id', 'str', True], 
-    ['end_call_id', 'str', True], 
+    ['start_cell_id', 'str', True], 
+    ['end_cell_id', 'str', True], 
     ['start_enodeb_id', 'str', True], 
     ['end_enodeb_id', 'str', True]]
 
@@ -64,8 +64,8 @@ def data_parsing(raw_data):
             for colname in data_point:
                 data[colname].append(data_point[colname])
     
-    data['start_enodeb_cell'] = [f"{enodeb}_{cell}" for enodeb, cell in zip(data['start_enodeb_id'], data['start_call_id'])]
-    data['end_enodeb_cell'] = [f"{enodeb}_{cell}" for enodeb, cell in zip(data['end_enodeb_id'], data['end_call_id'])]
+    data['start_enodeb_cell'] = [f"{enodeb}" for enodeb, cell in zip(data['start_enodeb_id'], data['start_cell_id'])]
+    data['end_enodeb_cell'] = [f"{enodeb}" for enodeb, cell in zip(data['end_enodeb_id'], data['end_cell_id'])]
 
     return pd.DataFrame(data)
 
@@ -136,30 +136,44 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval):
     return pd.DataFrame(output), enodeb_to_idx_dict_for_plot
 
 
-def mapping_time_frame_key(time_stamp, T_start, time_frame_interval):
+def mapping_time_frame_key(time_stamp:datetime, T_start:datetime, time_frame_interval:int):
     delta_s = math.ceil((time_stamp - T_start).total_seconds()/time_frame_interval)*time_frame_interval
     frame_key = T_start + datetime.timedelta(seconds=delta_s)
     return frame_key
 
 def HMM_modeling(training_data):
+    input_array = np.array(training_data['signal']).reshape(-1,1)
     model = hmm.GaussianHMM(n_components=2, covariance_type="diag",n_iter=100, algorithm='viterbi', min_covar=0.001)
-    model.fit(np.array(training_data['signal']).reshape(-1,1))
+    model.fit(input_array)
 
-    return model
+    prediction = model.predict(input_array)
+    var_zero_status = np.var(input_array[np.where(prediction==0)])
+    var_one_status = np.var(input_array[np.where(prediction==1)])
+
+    if var_zero_status > var_one_status:
+        reverse_switch = True
+    else:
+        reverse_switch = False
+
+    return model, reverse_switch
+
+def HMM_prediction(signal_list, model, reverse_switch):
+    prediction = model.predict(np.array(signal_list).reshape(-1,1))
+    if reverse_switch:
+        prediction = np.absolute(prediction-1)
+    
+    return prediction.tolist()
 
 def enodebs_vectoring(co_occurrence_list:list):
     co_occurrence_list = [" ".join(enodebs_list) for enodebs_list in co_occurrence_list]
     vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 1)
     tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
 
-    decomposer = TruncatedSVD(n_components = 6, n_iter = 60)
+    decomposer = TruncatedSVD(n_components = 4, n_iter = 60)
     decomposer.fit(tfidf_scores.toarray())
 
     vectors_array = decomposer.components_.T
 
-    # sorted_enodeb_array = [[vectorizer.vocabulary_[i], i] for i in vectorizer.vocabulary_]
-    # sorted_enodeb_array.sort()
-    # sorted_enodeb_array = np.array([i[1] for i in sorted_enodeb_array])
     enodeb_to_idx_dict = vectorizer.vocabulary_
 
     return [vectors_array, enodeb_to_idx_dict]
