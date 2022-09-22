@@ -39,12 +39,11 @@ training_data = utils.personal_data_processing(data.loc[data['imsi']==TRAINING_I
 model, reverse_switch = utils.HMM_modeling(training_data)
 
 # predict moving/static status
-with open("../result/output.csv", 'a') as f:
-    w =csv.writer(f)
+with open("../result/output.csv", 'a', newline='') as f:
+    w = csv.writer(f)
     w.writerow(data.columns.tolist() + ['moving_status'])
 
 for imsi in [TRAINING_IMSI] + list(set(list(data['imsi']))):
-# for imsi in [TRAINING_IMSI]:
     try:
         subset = data.loc[data['imsi']==imsi]
         subset = subset.sort_values(by='start_time')
@@ -56,8 +55,8 @@ for imsi in [TRAINING_IMSI] + list(set(list(data['imsi']))):
         # mapping the status back to original dataset
         time_frame_key_to_status = {key:status for key, status in zip(personal_data['time_frame_key'], personal_data['status'])}
 
-        with open("../result/output.csv", 'a') as f:
-            w =csv.writer(f, delimiter='|')
+        with open("../result/output.csv", 'a', newline='') as f:
+            w = csv.writer(f)
 
             for row_idx in subset.index:
                 key = utils.mapping_time_frame_key(subset.loc[row_idx, 'start_time'], START_TIME, TIME_FRAME_INTERVAL)
@@ -103,7 +102,7 @@ for imsi in [TRAINING_IMSI] + list(set(list(data['imsi']))):
         plt.close()
 
     except Exception as error:
-        with open("../result/elimiated_imsi.csv", 'a') as f:
+        with open("../result/elimiated_imsi.csv", 'a', newline='') as f:
             w = csv.writer(f)
             w.writerow([imsi])
 
