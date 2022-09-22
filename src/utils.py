@@ -80,7 +80,7 @@ def cat_to_idx_mapping(cat_list:list):
     
     return cat_to_idx_dict
 
-def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval):
+def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, pca_dim, window_size):
     data = data.sort_values(by='start_time')
     time_frame_to_enodebs_dict = {}
     enodeb_list = []
@@ -111,7 +111,8 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval):
     key_enodebs_list.sort()
     
 
-    enodeb_vectors_array, enodeb_to_idx_dict = enodebs_vectoring(co_occurrence_list)
+    # enodeb_vectors_array, enodeb_to_idx_dict = enodebs_vectoring(co_occurrence_list, pca_dim)
+    enodeb_vectors_array, enodeb_to_idx_dict = enodebs_vectoring_2(data, pca_dim, window_size)
     key_enodebs_list = [i for i in key_enodebs_list if len([j for j in i[1] if j in enodeb_to_idx_dict]) > 0]
 
     for idx in range(1, len(key_enodebs_list)):
@@ -164,16 +165,36 @@ def HMM_prediction(signal_list, model, reverse_switch):
     
     return prediction.tolist()
 
-def enodebs_vectoring(co_occurrence_list:list):
+def enodebs_vectoring(co_occurrence_list:list, pca_dim:int):
     co_occurrence_list = [" ".join(enodebs_list) for enodebs_list in co_occurrence_list]
     vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 1)
     tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
 
-    decomposer = TruncatedSVD(n_components = 4, n_iter = 60)
+    decomposer = TruncatedSVD(n_components = pca_dim, n_iter = 60)
     decomposer.fit(tfidf_scores.toarray())
 
     vectors_array = decomposer.components_.T
 
+    enodeb_to_idx_dict = vectorizer.vocabulary_
+
+    return [vectors_array, enodeb_to_idx_dict]
+
+def enodebs_vectoring_2(data:pd.DataFrame, pca_dim:int, window_size:int):
+    co_occurrence_list = []
+
+    for idx in data.index:
+        subset = data.loc[data['start_time'] > data.loc[idx,'start_time'] - datetime.timedelta(seconds=window_size/2)]
+        subset = subset.loc[data['start_time'] < data.loc[idx, 'start_time'] +  datetime.timedelta(seconds=window_size/2)]
+        co_occurrence_list.append(" ".join(list(set(data.loc[subset.index, 'start_enodeb_cell'].tolist() + data.loc[subset.index, 'start_enodeb_cell'].tolist()))))
+        
+    vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 1)
+    tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
+
+    decomposer = TruncatedSVD(n_components = pca_dim, n_iter = 60)
+
+    decomposer.fit(tfidf_scores.toarray())
+
+    vectors_array = decomposer.components_.T
     enodeb_to_idx_dict = vectorizer.vocabulary_
 
     return [vectors_array, enodeb_to_idx_dict]

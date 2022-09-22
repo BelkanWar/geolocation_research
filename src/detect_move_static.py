@@ -9,11 +9,12 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # parameters
-TIME_FRAME_INTERVAL = 300
-PCA_DIM = 5
+TIME_FRAME_INTERVAL = 120
+WINDOW_SIZE = 300
+PCA_DIM = 4
 START_TIME = datetime.datetime(2022, 9, 17)
 END_TIME = datetime.datetime(2022, 9, 20)
-TRAINING_IMSI = '510018335526102'
+TRAINING_IMSI = '510010444367250'
 ['510018335526102', '510016935104469', '510010444367250']
 
 # purge result folders
@@ -34,7 +35,7 @@ time_frame_to_idx_dict = {
 
 
 # training HMM model
-training_data = utils.personal_data_processing(data.loc[data['imsi']==TRAINING_IMSI], START_TIME, TIME_FRAME_INTERVAL)[0]
+training_data = utils.personal_data_processing(data.loc[data['imsi']==TRAINING_IMSI], START_TIME, TIME_FRAME_INTERVAL, PCA_DIM, WINDOW_SIZE)[0]
 model, reverse_switch = utils.HMM_modeling(training_data)
 
 # predict moving/static status
@@ -46,7 +47,7 @@ for imsi in [TRAINING_IMSI] + list(set(list(data['imsi']))):
     try:
         subset = data.loc[data['imsi']==imsi]
         subset = subset.sort_values(by='start_time')
-        personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(subset, START_TIME, TIME_FRAME_INTERVAL)
+        personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(subset, START_TIME, TIME_FRAME_INTERVAL, PCA_DIM, WINDOW_SIZE)
 
         # moving/static status
         personal_data['status'] = utils.HMM_prediction(personal_data['signal'], model, reverse_switch)
