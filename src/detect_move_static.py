@@ -15,7 +15,7 @@ PCA_DIM = 4
 START_TIME = datetime.datetime(2022, 9, 17)
 END_TIME = datetime.datetime(2022, 9, 20)
 TRAINING_IMSI = '510010444367250'
-['510018335526102', '510016935104469', '510010444367250']
+['510018335526102', '510011647797943', '510010444367250']
 
 # purge result folders
 for folder_path in ['../img/', '../result/']:
@@ -44,6 +44,7 @@ with open("../result/output.csv", 'a') as f:
     w.writerow(data.columns.tolist() + ['moving_status'])
 
 for imsi in [TRAINING_IMSI] + list(set(list(data['imsi']))):
+# for imsi in [TRAINING_IMSI]:
     try:
         subset = data.loc[data['imsi']==imsi]
         subset = subset.sort_values(by='start_time')

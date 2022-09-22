@@ -6,7 +6,6 @@ import datetime
 import math
 import pandas as pd
 import numpy as np
-import bisect
 from hmmlearn import hmm
 from sklearn.decomposition import TruncatedSVD, PCA
 from sklearn.feature_extraction.text import TfidfVectorizer
