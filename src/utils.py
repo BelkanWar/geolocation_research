@@ -103,6 +103,10 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, pc
                 data['start_enodeb_cell'][idx]
             ]
 
+    # filter out imsi without enought data point
+    if len(time_frame_to_enodebs_dict) < 30:
+        return ''
+
     key_enodebs_list = [[key, list(time_frame_to_enodebs_dict[key])] for key in time_frame_to_enodebs_dict]
     co_occurrence_list = [i[1] for i in key_enodebs_list]
     key_enodebs_list.sort()
@@ -136,7 +140,7 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, pc
 
 def mapping_time_frame_key(time_stamp:datetime, T_start:datetime, time_frame_interval:int):
     delta_s = math.ceil((time_stamp - T_start).total_seconds()/time_frame_interval)*time_frame_interval
-    frame_key = T_start + datetime.timedelta(seconds=delta_s)
+    frame_key = (T_start + datetime.timedelta(seconds=delta_s))
     return frame_key
 
 def HMM_modeling(training_data):
