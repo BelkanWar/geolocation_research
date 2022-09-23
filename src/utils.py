@@ -79,7 +79,7 @@ def cat_to_idx_mapping(cat_list:list):
     
     return cat_to_idx_dict
 
-def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, pca_dim, window_size):
+def personal_data_processing(data:pd.DataFrame, T_start:datetime, time_frame_interval:int, pca_dim:int, window_size:int, vectorize_method:str):
     data = data.sort_values(by='start_time')
     time_frame_to_enodebs_dict = {}
     enodeb_list = []
@@ -88,7 +88,7 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, pc
     
     for start_enodeb, end_enodeb in zip(data['start_enodeb_cell'], data['end_enodeb_cell']):
         enodeb_list.append(start_enodeb)
-        enodeb_list.append(end_enodeb)
+        # enodeb_list.append(end_enodeb)
 
     enodeb_to_idx_dict_for_plot = cat_to_idx_mapping(enodeb_list)
     
@@ -97,33 +97,40 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, pc
         key = mapping_time_frame_key(data['start_time'][idx], T_start, time_frame_interval)
         if key in time_frame_to_enodebs_dict:
             time_frame_to_enodebs_dict[key].append(data['start_enodeb_cell'][idx])
-            
         else:
-            time_frame_to_enodebs_dict[key] = [
-                data['start_enodeb_cell'][idx]
-            ]
+            time_frame_to_enodebs_dict[key] = [data['start_enodeb_cell'][idx]]
 
     # filter out imsi without enought data point
     if len(time_frame_to_enodebs_dict) < 30:
         return ''
 
+    # conduct enodeb/time_frame vectorization, and HMM model
     key_enodebs_list = [[key, list(time_frame_to_enodebs_dict[key])] for key in time_frame_to_enodebs_dict]
-    co_occurrence_list = [i[1] for i in key_enodebs_list]
     key_enodebs_list.sort()
+    co_occurrence_list = [i[1] for i in key_enodebs_list]
     
 
-    # enodeb_vectors_array, enodeb_to_idx_dict = enodebs_vectoring(co_occurrence_list, pca_dim)
-    enodeb_vectors_array, enodeb_to_idx_dict = enodebs_vectoring_2(data, pca_dim, window_size)
-    key_enodebs_list = [i for i in key_enodebs_list if len([j for j in i[1] if j in enodeb_to_idx_dict]) > 0]
+    if vectorize_method == 'enodeb_base':
+        enodeb_vectors_array, enodeb_to_idx_dict = enodebs_vectoring(data, pca_dim, window_size)
+        key_enodebs_list = [i for i in key_enodebs_list if len([j for j in i[1] if j in enodeb_to_idx_dict]) > 0]
+    else:
+        time_frame_vectors_array = time_frame_vectoring(co_occurrence_list, pca_dim)
+    
 
     for idx in range(1, len(key_enodebs_list)):
         T1_key, T1_enodebs_list = key_enodebs_list[idx-1]
         T2_key, T2_enodebs_list = key_enodebs_list[idx]
-        T1_enodeb_idx_array = np.array([enodeb_to_idx_dict[enodeb] for enodeb in T1_enodebs_list if enodeb in enodeb_to_idx_dict])
-        T2_enodeb_idx_array = np.array([enodeb_to_idx_dict[enodeb] for enodeb in T2_enodebs_list if enodeb in enodeb_to_idx_dict])
-        T1_vector_sum = np.mean(enodeb_vectors_array[T1_enodeb_idx_array], axis=0).reshape((1,-1))
-        T2_vector_sum = np.mean(enodeb_vectors_array[T2_enodeb_idx_array], axis=0).reshape((1,-1))
+
+        if vectorize_method == 'enodeb_base':
+            T1_enodeb_idx_array = np.array([enodeb_to_idx_dict[enodeb] for enodeb in T1_enodebs_list if enodeb in enodeb_to_idx_dict])
+            T2_enodeb_idx_array = np.array([enodeb_to_idx_dict[enodeb] for enodeb in T2_enodebs_list if enodeb in enodeb_to_idx_dict])
+            T1_vector_sum = np.mean(enodeb_vectors_array[T1_enodeb_idx_array], axis=0).reshape((1,-1))
+            T2_vector_sum = np.mean(enodeb_vectors_array[T2_enodeb_idx_array], axis=0).reshape((1,-1))
         
+        else:
+            T1_vector_sum = time_frame_vectors_array[idx-1].reshape((1,-1))
+            T2_vector_sum = time_frame_vectors_array[idx].reshape((1,-1))
+
         signal = cosine_distances(T1_vector_sum, T2_vector_sum)[0,0]
 
         output['time_frame_key'].append(T2_key)
@@ -166,21 +173,8 @@ def HMM_prediction(signal_list, model, reverse_switch):
     
     return prediction.tolist()
 
-def enodebs_vectoring(co_occurrence_list:list, pca_dim:int):
-    co_occurrence_list = [" ".join(enodebs_list) for enodebs_list in co_occurrence_list]
-    vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 1)
-    tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
 
-    decomposer = TruncatedSVD(n_components = min(pca_dim, math.ceil(len(vectorizer.vocabulary_)/10)), n_iter = 60)
-    decomposer.fit(tfidf_scores.toarray())
-
-    vectors_array = decomposer.components_.T
-
-    enodeb_to_idx_dict = vectorizer.vocabulary_
-
-    return [vectors_array, enodeb_to_idx_dict]
-
-def enodebs_vectoring_2(data:pd.DataFrame, pca_dim:int, window_size:int):
+def enodebs_vectoring(data:pd.DataFrame, pca_dim:int, window_size:int):
     co_occurrence_list = []
 
     for idx in data.index:
@@ -191,7 +185,7 @@ def enodebs_vectoring_2(data:pd.DataFrame, pca_dim:int, window_size:int):
     vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 1)
     tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
 
-    decomposer = TruncatedSVD(n_components = min(pca_dim, math.ceil(len(vectorizer.vocabulary_)/10)), n_iter = 60)
+    decomposer = TruncatedSVD(n_components = min(pca_dim, math.ceil(len(vectorizer.vocabulary_)/10)+1), n_iter = 60)
 
     decomposer.fit(tfidf_scores.toarray())
 
@@ -200,3 +194,13 @@ def enodebs_vectoring_2(data:pd.DataFrame, pca_dim:int, window_size:int):
 
     return [vectors_array, enodeb_to_idx_dict]
 
+def time_frame_vectoring(co_occurrence_list:list, pca_dim:int):
+    co_occurrence_list = [" ".join(enodebs_list) for enodebs_list in co_occurrence_list]
+    vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 1)
+    tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
+
+    decomposer = TruncatedSVD(n_components = min(pca_dim, math.ceil(len(vectorizer.vocabulary_)/10)+1), n_iter = 60)
+    decomposer.fit(tfidf_scores.toarray())
+    vectors_array = decomposer.transform(tfidf_scores.toarray())
+
+    return vectors_array

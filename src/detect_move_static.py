@@ -9,11 +9,14 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 
 # parameters
+VECTORIZE_METHOD = 'enodeb_base' # options: {enodeb_base, time_frame_base}
+START_TIME = datetime.datetime(2022, 9, 17)
+END_TIME = datetime.datetime(2022, 9, 20)
+RAW_DATA_FILE_NAME = "150men.csv"
+
 TIME_FRAME_INTERVAL = 120
 WINDOW_SIZE = 300
 PCA_DIM = 4
-START_TIME = datetime.datetime(2022, 9, 17)
-END_TIME = datetime.datetime(2022, 9, 20)
 TRAINING_IMSI = '510010444367250'
 ['510018335526102', '510011647797943', '510010444367250']
 
@@ -24,7 +27,7 @@ for folder_path in ['../img/', '../result/']:
             os.remove(os.path.join(root, file))
 
 
-data = utils.data_parsing(utils.read_raw_data("../data/150men.csv"))
+data = utils.data_parsing(utils.read_raw_data(f"../data/{RAW_DATA_FILE_NAME}"))
 data = data.loc[data['start_time'] > START_TIME]
 data = data.loc[data['start_time'] < END_TIME]
 
@@ -35,7 +38,7 @@ time_frame_to_idx_dict = {
 
 
 # training HMM model
-training_data = utils.personal_data_processing(data.loc[data['imsi']==TRAINING_IMSI], START_TIME, TIME_FRAME_INTERVAL, PCA_DIM, WINDOW_SIZE)[0]
+training_data = utils.personal_data_processing(data.loc[data['imsi']==TRAINING_IMSI], START_TIME, TIME_FRAME_INTERVAL, PCA_DIM, WINDOW_SIZE, VECTORIZE_METHOD)[0]
 model, reverse_switch = utils.HMM_modeling(training_data)
 
 # predict moving/static status
@@ -47,7 +50,7 @@ for imsi in [TRAINING_IMSI] + list(set(list(data['imsi']))):
     try:
         subset = data.loc[data['imsi']==imsi]
         subset = subset.sort_values(by='start_time')
-        personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(subset, START_TIME, TIME_FRAME_INTERVAL, PCA_DIM, WINDOW_SIZE)
+        personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(subset, START_TIME, TIME_FRAME_INTERVAL, PCA_DIM, WINDOW_SIZE, VECTORIZE_METHOD)
 
         # moving/static status
         personal_data['status'] = utils.HMM_prediction(personal_data['signal'], model, reverse_switch)
