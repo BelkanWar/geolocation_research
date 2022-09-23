@@ -97,12 +97,10 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, pc
         key = mapping_time_frame_key(data['start_time'][idx], T_start, time_frame_interval)
         if key in time_frame_to_enodebs_dict:
             time_frame_to_enodebs_dict[key].append(data['start_enodeb_cell'][idx])
-            time_frame_to_enodebs_dict[key].append(data['end_enodeb_cell'][idx])
             
         else:
             time_frame_to_enodebs_dict[key] = [
-                data['start_enodeb_cell'][idx],
-                data['end_enodeb_cell'][idx],
+                data['start_enodeb_cell'][idx]
             ]
 
     key_enodebs_list = [[key, list(time_frame_to_enodebs_dict[key])] for key in time_frame_to_enodebs_dict]
@@ -169,7 +167,7 @@ def enodebs_vectoring(co_occurrence_list:list, pca_dim:int):
     vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 1)
     tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
 
-    decomposer = TruncatedSVD(n_components = pca_dim, n_iter = 60)
+    decomposer = TruncatedSVD(n_components = min(pca_dim, math.ceil(len(vectorizer.vocabulary_)/10)), n_iter = 60)
     decomposer.fit(tfidf_scores.toarray())
 
     vectors_array = decomposer.components_.T
@@ -184,12 +182,12 @@ def enodebs_vectoring_2(data:pd.DataFrame, pca_dim:int, window_size:int):
     for idx in data.index:
         subset = data.loc[data['start_time'] > data.loc[idx,'start_time'] - datetime.timedelta(seconds=window_size/2)]
         subset = subset.loc[data['start_time'] < data.loc[idx, 'start_time'] +  datetime.timedelta(seconds=window_size/2)]
-        co_occurrence_list.append(" ".join(list(set(data.loc[subset.index, 'start_enodeb_cell'].tolist() + data.loc[subset.index, 'start_enodeb_cell'].tolist()))))
+        co_occurrence_list.append(" ".join(data.loc[subset.index, 'start_enodeb_cell'].tolist()))
         
     vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 1)
     tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
 
-    decomposer = TruncatedSVD(n_components = pca_dim, n_iter = 60)
+    decomposer = TruncatedSVD(n_components = min(pca_dim, math.ceil(len(vectorizer.vocabulary_)/10)), n_iter = 60)
 
     decomposer.fit(tfidf_scores.toarray())
 
