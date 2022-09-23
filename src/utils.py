@@ -97,12 +97,10 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, pc
         key = mapping_time_frame_key(data['start_time'][idx], T_start, time_frame_interval)
         if key in time_frame_to_enodebs_dict:
             time_frame_to_enodebs_dict[key].append(data['start_enodeb_cell'][idx])
-            time_frame_to_enodebs_dict[key].append(data['end_enodeb_cell'][idx])
             
         else:
             time_frame_to_enodebs_dict[key] = [
-                data['start_enodeb_cell'][idx],
-                data['end_enodeb_cell'][idx],
+                data['start_enodeb_cell'][idx]
             ]
 
     key_enodebs_list = [[key, list(time_frame_to_enodebs_dict[key])] for key in time_frame_to_enodebs_dict]
@@ -111,18 +109,15 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, pc
     
 
     # enodeb_vectors_array, enodeb_to_idx_dict = enodebs_vectoring(co_occurrence_list, pca_dim)
-    enodeb_vectors_array, enodeb_to_idx_dict = enodebs_vectoring_2(data, pca_dim, window_size)
-    key_enodebs_list = [i for i in key_enodebs_list if len([j for j in i[1] if j in enodeb_to_idx_dict]) > 0]
+    # enodeb_vectors_array, enodeb_to_idx_dict = enodebs_vectoring_2(data, pca_dim, window_size)
+    time_frame_vectors = time_frame_vectoring(co_occurrence_list, pca_dim)
+    # key_enodebs_list = [i for i in key_enodebs_list if len([j for j in i[1] if j in enodeb_to_idx_dict]) > 0]
 
     for idx in range(1, len(key_enodebs_list)):
         T1_key, T1_enodebs_list = key_enodebs_list[idx-1]
         T2_key, T2_enodebs_list = key_enodebs_list[idx]
-        T1_enodeb_idx_array = np.array([enodeb_to_idx_dict[enodeb] for enodeb in T1_enodebs_list if enodeb in enodeb_to_idx_dict])
-        T2_enodeb_idx_array = np.array([enodeb_to_idx_dict[enodeb] for enodeb in T2_enodebs_list if enodeb in enodeb_to_idx_dict])
-        T1_vector_sum = np.mean(enodeb_vectors_array[T1_enodeb_idx_array], axis=0).reshape((1,-1))
-        T2_vector_sum = np.mean(enodeb_vectors_array[T2_enodeb_idx_array], axis=0).reshape((1,-1))
         
-        signal = cosine_distances(T1_vector_sum, T2_vector_sum)[0,0]
+        signal = cosine_distances(time_frame_vectors[idx].reshape((1,-1)), time_frame_vectors[idx-1].reshape((1,-1)))[0,0]
 
         output['time_frame_key'].append(T2_key)
         output['enodebs'].append(list(set(T2_enodebs_list)))
@@ -198,3 +193,13 @@ def enodebs_vectoring_2(data:pd.DataFrame, pca_dim:int, window_size:int):
 
     return [vectors_array, enodeb_to_idx_dict]
 
+def time_frame_vectoring(co_occurrence_list:list, pca_dim:int):
+    co_occurrence_list = [" ".join(enodebs_list) for enodebs_list in co_occurrence_list]
+    vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 1)
+    tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
+
+    decomposer = TruncatedSVD(n_components = min(pca_dim, math.ceil(len(vectorizer.vocabulary_)/10)), n_iter = 60)
+    decomposer.fit(tfidf_scores.toarray())
+    vectors_array = decomposer.transform(tfidf_scores.toarray())
+
+    return vectors_array
