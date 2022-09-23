@@ -179,7 +179,7 @@ def enodebs_vectoring_2(data:pd.DataFrame, pca_dim:int, window_size:int):
     for idx in data.index:
         subset = data.loc[data['start_time'] > data.loc[idx,'start_time'] - datetime.timedelta(seconds=window_size/2)]
         subset = subset.loc[data['start_time'] < data.loc[idx, 'start_time'] +  datetime.timedelta(seconds=window_size/2)]
-        co_occurrence_list.append(" ".join(list(set(data.loc[subset.index, 'start_enodeb_cell'].tolist() + data.loc[subset.index, 'start_enodeb_cell'].tolist()))))
+        co_occurrence_list.append(" ".join(data.loc[subset.index, 'start_enodeb_cell'].tolist()))
         
     vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 1)
     tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
