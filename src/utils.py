@@ -103,6 +103,9 @@ def personal_data_processing(data:pd.DataFrame, T_start, time_frame_interval, pc
                 data['start_enodeb_cell'][idx]
             ]
 
+    if len(time_frame_to_enodebs_dict) < 30:
+        return ''
+
     key_enodebs_list = [[key, list(time_frame_to_enodebs_dict[key])] for key in time_frame_to_enodebs_dict]
     co_occurrence_list = [i[1] for i in key_enodebs_list]
     key_enodebs_list.sort()
