@@ -4,18 +4,19 @@ import utils
 import datetime
 import math
 import csv
+import multiprocessing
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
 
 # parameters
-VECTORIZE_METHOD = 'enodeb_base' # options: {enodeb_base, time_frame_base}
+VECTORIZE_METHOD = 'time_frame_base' # options: {enodeb_base, time_frame_base}
 START_TIME = datetime.datetime(2022, 9, 17)
 END_TIME = datetime.datetime(2022, 9, 20)
 RAW_DATA_FILE_NAME = "150men.csv"
 
 TIME_FRAME_INTERVAL = 120
-WINDOW_SIZE = 300
+WINDOW_SIZE = 500
 PCA_DIM = 4
 TRAINING_IMSI = '510010444367250'
 ['510018335526102', '510011647797943', '510010444367250']
@@ -46,9 +47,11 @@ with open("../result/output.csv", 'a', newline='') as f:
     w = csv.writer(f)
     w.writerow(data.columns.tolist() + ['moving_status'])
 
-for imsi in [TRAINING_IMSI] + list(set(list(data['imsi']))):
+
+def core_job(subset):
     try:
-        subset = data.loc[data['imsi']==imsi]
+        # subset = data.loc[data['imsi']==imsi]
+        imsi = subset['imsi'].tolist()[0]
         subset = subset.sort_values(by='start_time')
         personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(subset, START_TIME, TIME_FRAME_INTERVAL, PCA_DIM, WINDOW_SIZE, VECTORIZE_METHOD)
 
@@ -80,32 +83,39 @@ for imsi in [TRAINING_IMSI] + list(set(list(data['imsi']))):
                 orignal_pattern[enodeb_to_idx_dict_for_plot[enodeb], time_idx, status] = 1
                 condense_pattern[enodeb_to_idx_dict_for_plot[enodeb], idx_idx, status] = 1
         
-        subset['time_idx'] = [(subset['start_time'].tolist()[i]-START_TIME).total_seconds()/86400 for i in range(len(subset.index))]
-        fig, ax1 = plt.subplots()
-        ax1.scatter(subset['time_idx'], subset['lat_first'], color='blue')
-        ax1.set_ylabel("latitude")
-        ax1.legend(['latitude'], loc="upper left")
-        plt.xticks(rotation=30)
-        ax2 = ax1.twinx()
-        ax2.scatter(subset['time_idx'], subset['lon_first'], color='red')
-        ax2.set_ylabel("lontitude")
-        ax2.legend(['lontitude'], loc='upper right')
-        plt.savefig(f"../img/{imsi}_latlon.png")
-        plt.close()
+        # subset['time_idx'] = [(subset['start_time'].tolist()[i]-START_TIME).total_seconds()/86400 for i in range(len(subset.index))]
+        # fig, ax1 = plt.subplots()
+        # ax1.scatter(subset['time_idx'], subset['lat_first'], color='blue')
+        # ax1.set_ylabel("latitude")
+        # ax1.legend(['latitude'], loc="upper left")
+        # plt.xticks(rotation=30)
+        # ax2 = ax1.twinx()
+        # ax2.scatter(subset['time_idx'], subset['lon_first'], color='red')
+        # ax2.set_ylabel("lontitude")
+        # ax2.legend(['lontitude'], loc='upper right')
+        # plt.savefig(f"../img/{imsi}_latlon.png")
+        # plt.close()
 
 
-        plt.imsave(f"../img/{imsi}_original_pattern.png", orignal_pattern)
+        # plt.imsave(f"../img/{imsi}_original_pattern.png", orignal_pattern)
         plt.imsave(f"../img/{imsi}_condense_pattern.png", condense_pattern)
-        plt.plot()
-        sns.lineplot(data = {
-            'idx':[i for i in range(personal_data.shape[0])], 
-            'signal':personal_data['signal']}
-            , x='idx', y='signal')
-        plt.savefig(f"../img/{imsi}_signal.png")
-        plt.close()
+        # plt.plot()
+        # sns.lineplot(data = {
+        #     'idx':[i for i in range(personal_data.shape[0])], 
+        #     'signal':personal_data['signal']}
+        #     , x='idx', y='signal')
+        # plt.savefig(f"../img/{imsi}_signal.png")
+        # plt.close()
 
     except Exception as error:
         with open("../result/elimiated_imsi.csv", 'a', newline='') as f:
             w = csv.writer(f)
             w.writerow([imsi])
+
+if __name__ == '__main__':
+    pool = multiprocessing.Pool()
+    imsi_list = list([imsi for imsi in set(data['imsi'])])
+    for idx in range(0, len(imsi_list), 30):
+        pool.map(core_job, [data.loc[data['imsi']==imsi] for imsi in imsi_list[idx:idx+30]])
+
 
