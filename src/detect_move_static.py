@@ -83,18 +83,18 @@ def core_job(subset):
                 orignal_pattern[enodeb_to_idx_dict_for_plot[enodeb], time_idx, status] = 1
                 condense_pattern[enodeb_to_idx_dict_for_plot[enodeb], idx_idx, status] = 1
         
-        subset['time_idx'] = [(subset['start_time'].tolist()[i]-START_TIME).total_seconds()/86400 for i in range(len(subset.index))]
-        fig, ax1 = plt.subplots()
-        ax1.scatter(subset['time_idx'], subset['lat_first'], color='blue')
-        ax1.set_ylabel("latitude")
-        ax1.legend(['latitude'], loc="upper left")
-        plt.xticks(rotation=30)
-        ax2 = ax1.twinx()
-        ax2.scatter(subset['time_idx'], subset['lon_first'], color='red')
-        ax2.set_ylabel("lontitude")
-        ax2.legend(['lontitude'], loc='upper right')
-        plt.savefig(f"../img/{imsi}_latlon.png")
-        plt.close()
+        # subset['time_idx'] = [(subset['start_time'].tolist()[i]-START_TIME).total_seconds()/86400 for i in range(len(subset.index))]
+        # fig, ax1 = plt.subplots()
+        # ax1.scatter(subset['time_idx'], subset['lat_first'], color='blue')
+        # ax1.set_ylabel("latitude")
+        # ax1.legend(['latitude'], loc="upper left")
+        # plt.xticks(rotation=30)
+        # ax2 = ax1.twinx()
+        # ax2.scatter(subset['time_idx'], subset['lon_first'], color='red')
+        # ax2.set_ylabel("lontitude")
+        # ax2.legend(['lontitude'], loc='upper right')
+        # plt.savefig(f"../img/{imsi}_latlon.png")
+        # plt.close()
 
 
         plt.imsave(f"../img/{imsi}_original_pattern.png", orignal_pattern)
