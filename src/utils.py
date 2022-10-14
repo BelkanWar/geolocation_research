@@ -11,7 +11,7 @@ from sklearn.decomposition import TruncatedSVD, PCA
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.metrics.pairwise import cosine_distances
 
-for path in ['../img', '../result']:
+for path in ['../img', '../result', '../splitted_data']:
     if os.path.exists(path) == False:
         os.mkdir(path)
 
@@ -34,10 +34,19 @@ scheme = [
 def read_raw_data(file_path):
     with open(file_path) as f:
         data = []
-        for i in csv.reader(f, delimiter='|'):
+        for i in csv.reader(f):
             data.append(i)
     
     return data
+
+def split_raw_data_by_imsi(file_path):
+    imsi_idx = [i[0] for i in scheme].index('imsi')
+    with open(file_path) as f_read:
+        for i in csv.reader(f_read, delimiter='|'):
+            imsi = i[imsi_idx]
+            with open(f"../splitted_data/{imsi}.csv", 'a', newline='') as f_write:
+                w = csv.writer(f_write)
+                w.writerow(i)
 
 def data_parsing(raw_data):
     data = {colname:[] for colname, data_type, use_switch in scheme if use_switch}
@@ -65,8 +74,10 @@ def data_parsing(raw_data):
     
     data['start_enodeb_cell'] = [f"{enodeb}" for enodeb, cell in zip(data['start_enodeb_id'], data['start_cell_id'])]
     data['end_enodeb_cell'] = [f"{enodeb}" for enodeb, cell in zip(data['end_enodeb_id'], data['end_cell_id'])]
+    data = pd.DataFrame(data)
+    data = data.sort_values(by='start_time')
 
-    return pd.DataFrame(data)
+    return data
 
 def cat_to_idx_mapping(cat_list:list):
     cat_to_idx_dict = {}
@@ -79,7 +90,11 @@ def cat_to_idx_mapping(cat_list:list):
     
     return cat_to_idx_dict
 
-def personal_data_processing(data:pd.DataFrame, T_start:datetime, time_frame_interval:int, pca_dim:int, window_size:int, vectorize_method:str):
+def personal_data_processing(data:pd.DataFrame, T_start:datetime, T_END:datetime, time_frame_interval:int, pca_dim:int, window_size:int, vectorize_method:str):
+
+    data = data.loc[data['start_time'] > T_start]
+    data = data.loc[data['start_time'] < T_END]
+    
     data = data.sort_values(by='start_time')
     time_frame_to_enodebs_dict = {}
     enodeb_list = []
