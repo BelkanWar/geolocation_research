@@ -7,8 +7,8 @@ import math
 import pandas as pd
 import numpy as np
 from hmmlearn import hmm
-from sklearn.decomposition import TruncatedSVD, PCA
-from sklearn.feature_extraction.text import TfidfVectorizer
+from sklearn.decomposition import TruncatedSVD
+from sklearn.feature_extraction.text import TfidfVectorizer, CountVectorizer
 from sklearn.metrics.pairwise import cosine_distances
 
 for path in ['../img', '../result', '../splitted_data']:
@@ -116,7 +116,7 @@ def personal_data_processing(data:pd.DataFrame, T_start:datetime, T_END:datetime
             time_frame_to_enodebs_dict[key] = [data['start_enodeb_cell'][idx]]
 
     # filter out imsi without enought data point
-    if len(time_frame_to_enodebs_dict) < 30:
+    if len(time_frame_to_enodebs_dict) < 30 or len(enodeb_to_idx_dict_for_plot) < 10:
         return ''
 
     # conduct enodeb/time_frame vectorization, and HMM model
@@ -153,10 +153,6 @@ def personal_data_processing(data:pd.DataFrame, T_start:datetime, T_END:datetime
         output['signal'].append(signal)
         output['interval'].append((T2_key-T1_key).total_seconds())
     
-    interval_std = np.std(output['interval'])
-    output['interval'] = [interval/interval_std for interval in output['interval']]
-    output['signal'] = [signal/interval for signal, interval in zip(output['signal'], output['interval'])]
-    
     return pd.DataFrame(output), enodeb_to_idx_dict_for_plot
 
 
@@ -167,14 +163,14 @@ def mapping_time_frame_key(time_stamp:datetime, T_start:datetime, time_frame_int
 
 def HMM_modeling(training_data):
     input_array = np.array(training_data['signal']).reshape(-1,1)
-    model = hmm.GaussianHMM(n_components=2, covariance_type="diag",n_iter=100, algorithm='viterbi', min_covar=0.001)
+    model = hmm.GaussianHMM(n_components=2, covariance_type="diag",n_iter=100, algorithm='viterbi', min_covar=0.1)
     model.fit(input_array)
 
     prediction = model.predict(input_array)
-    var_zero_status = np.var(input_array[np.where(prediction==0)])
-    var_one_status = np.var(input_array[np.where(prediction==1)])
+    mean_zero_status = np.mean(input_array[np.where(prediction==0)])
+    mean_one_status = np.mean(input_array[np.where(prediction==1)])
 
-    if var_zero_status > var_one_status:
+    if mean_zero_status > mean_one_status:
         reverse_switch = True
     else:
         reverse_switch = False
@@ -195,12 +191,18 @@ def enodebs_vectoring(data:pd.DataFrame, pca_dim:int, window_size:int):
     for idx in data.index:
         subset = data.loc[data['start_time'] > data.loc[idx,'start_time'] - datetime.timedelta(seconds=window_size/2)]
         subset = subset.loc[data['start_time'] < data.loc[idx, 'start_time'] +  datetime.timedelta(seconds=window_size/2)]
-        co_occurrence_list.append(" ".join(data.loc[subset.index, 'start_enodeb_cell'].tolist()))
-        
-    vectorizer = TfidfVectorizer(sublinear_tf = True, token_pattern = r"\S+", min_df = 1)
+        enodeb_list = data.loc[subset.index, 'start_enodeb_cell'].tolist()
+        if len(enodeb_list) == 1 and enodeb_list[0] in co_occurrence_list:
+            pass
+        else:
+            co_occurrence_list.append(" ".join(enodeb_list))
+
+
+    vectorizer = CountVectorizer(token_pattern = r"\S+", min_df = 1)
     tfidf_scores = vectorizer.fit_transform(co_occurrence_list)
 
-    decomposer = TruncatedSVD(n_components = min(pca_dim, math.ceil(len(vectorizer.vocabulary_)/10)+1), n_iter = 60)
+    # decomposer = TruncatedSVD(n_components = min(pca_dim, math.ceil(len(vectorizer.vocabulary_)/10)+1), n_iter = 60)
+    decomposer = TruncatedSVD(n_components = pca_dim, n_iter = 60)
 
     decomposer.fit(tfidf_scores.toarray())
 

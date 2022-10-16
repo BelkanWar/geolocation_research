@@ -15,18 +15,18 @@ START_TIME = datetime.datetime(2022, 9, 28)
 END_TIME = datetime.datetime(2022, 10, 1)
 RAW_DATA_FILE_NAME = "small_jakarta_sample.csv"
 
-TIME_FRAME_INTERVAL = 120
-WINDOW_SIZE = 500
+TIME_FRAME_INTERVAL = 180
+WINDOW_SIZE = 3600 
 PCA_DIM = 4
-TRAINING_IMSI = '510017060321551'
-['510018335526102', '510011647797943', '510010444367250']
+TRAINING_IMSI = '510019860290892'
+['510018710502489', '510018010344587', '510019860290892', '510017260321620']
 
 # purge result folders
 for folder_path in ['../img/', '../result/', '../splitted_data']:
     for root, folder, files in os.walk(folder_path):
         for file in files:
             os.remove(os.path.join(root, file))
-print('old data purge completed')
+print('start to split dataset by imsi')
 
 # time frame
 time_frame_to_idx_dict = {
@@ -38,7 +38,6 @@ utils.split_raw_data_by_imsi(f"../data/{RAW_DATA_FILE_NAME}")
 
 
 # training HMM model
-
 training_data = utils.personal_data_processing(
     utils.data_parsing(utils.read_raw_data(f"../splitted_data/{TRAINING_IMSI}.csv")), 
     START_TIME, 
@@ -57,14 +56,20 @@ for root, folder, files in os.walk("../splitted_data"):
     for file in files:
         imsi_list.append(file.split(sep='.')[0])
 
-
+print('start to conduct prediction')
 
 def core_job(imsi):
     try:
         file_path = f"../splitted_data/{imsi}.csv"
         subset = utils.data_parsing(utils.read_raw_data(file_path))
-        personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(subset, START_TIME, END_TIME, TIME_FRAME_INTERVAL, PCA_DIM, WINDOW_SIZE, VECTORIZE_METHOD)
-        
+        personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(
+            subset, 
+            START_TIME, 
+            END_TIME, 
+            TIME_FRAME_INTERVAL, 
+            PCA_DIM, 
+            WINDOW_SIZE, 
+            VECTORIZE_METHOD)
 
         # moving/static status
         personal_data['status'] = utils.HMM_prediction(personal_data['signal'], model, reverse_switch)
