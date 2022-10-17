@@ -4,6 +4,7 @@ import csv
 
 TARGET_PATH = "../data/small_jakarta_sample.csv"
 SOURCE_PATH = "../data/jakarta_sample.csv"
+SAMPLE_SIZE = 3000
 
 if os.path.exists(TARGET_PATH):
     os.remove(TARGET_PATH)
@@ -21,7 +22,7 @@ with open(SOURCE_PATH) as f_read:
 imsi_count_list = [[imsi, imsi_count_dict[imsi]] for imsi in imsi_count_dict]
 imsi_count_list.sort(key=lambda x:x[1], reverse=True)
 
-imsi_set = set([i[0] for i in imsi_count_list[:1000]])
+imsi_set = set([i[0] for i in imsi_count_list[:SAMPLE_SIZE]])
 
 f_read = open(SOURCE_PATH)
 f_write = open(TARGET_PATH, 'a', newline='')
