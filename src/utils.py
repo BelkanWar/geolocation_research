@@ -90,7 +90,7 @@ def cat_to_idx_mapping(cat_list:list):
     
     return cat_to_idx_dict
 
-def personal_data_processing(data:pd.DataFrame, T_start:datetime, T_END:datetime, time_frame_interval:int, pca_dim:int, window_size:int, vectorize_method:str):
+def personal_data_processing(data:pd.DataFrame, T_start:datetime.datetime, T_END:datetime.datetime, time_frame_interval:int, pca_dim:int, window_size:int, vectorize_method:str):
 
     data = data.loc[data['start_time'] > T_start]
     data = data.loc[data['start_time'] < T_END]
@@ -156,7 +156,7 @@ def personal_data_processing(data:pd.DataFrame, T_start:datetime, T_END:datetime
     return pd.DataFrame(output), enodeb_to_idx_dict_for_plot
 
 
-def mapping_time_frame_key(time_stamp:datetime, T_start:datetime, time_frame_interval:int):
+def mapping_time_frame_key(time_stamp:datetime.datetime, T_start:datetime.datetime, time_frame_interval:int):
     delta_s = math.ceil((time_stamp - T_start).total_seconds()/time_frame_interval)*time_frame_interval
     frame_key = (T_start + datetime.timedelta(seconds=delta_s))
     return frame_key
