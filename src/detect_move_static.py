@@ -99,6 +99,28 @@ def core_job(imsi):
                 orignal_pattern[enodeb_to_idx_dict_for_plot[enodeb], time_idx, status] = 1
                 condense_pattern[enodeb_to_idx_dict_for_plot[enodeb], idx_idx, status] = 1
         
+        display_subset = {'time_idx':[], 'enodeb_idx':[], 'status':[]}
+        for idx_idx in range(len(personal_data.index)):
+            idx = personal_data.index[idx_idx]
+            status = personal_data['status'][idx]
+            time_idx = (personal_data['start_time'].tolist()[idx_idx]-START_TIME).total_seconds()/86400
+            for enodeb in personal_data['enodebs'][idx]:
+                enodeb_idx = enodeb_to_idx_dict_for_plot[enodeb]
+                display_subset['time_idx'].append(time_idx)
+                display_subset['enodeb_idx'].append(enodeb_idx)
+                display_subset['status'].append(status)
+
+
+        fig, axs = plt.subplots(3,1, sharex=True)
+        sns.scatterplot(data=display_subset, x='start_time', y='enodeb_idx', hue='status', ax=axs[0])
+        sns.lineplot(data=subset, x='time_idx', y='lat_first', ax=axs[1])
+        sns.lineplot(data=subset, x='time_idx', y='lon_first', ax=axs[2])
+        # fig.tight_layout()
+        plt.savefig(f"../img/{imsi}_latlon.png")
+        plt.close()
+        # reference: https://datavizpyr.com/seaborn-join-two-plots-with-shared-y-axis/
+        
+
         # subset['time_idx'] = [(subset['start_time'].tolist()[i]-START_TIME).total_seconds()/86400 for i in range(len(subset.index))]
         # fig, ax1 = plt.subplots()
         # ax1.scatter(subset['time_idx'], subset['lat_first'], color='blue')
