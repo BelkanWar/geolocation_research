@@ -15,5 +15,5 @@ for root, folder, files in os.walk("../splitted_data/"):
             lat = [max(data['lat_first']), min(data['lat_first'])]
             lon = [max(data['lon_first']), min(data['lon_first'])]
 
-print(lat, lon)
+print(f"lat: {lat} | lon: {lon}")
 

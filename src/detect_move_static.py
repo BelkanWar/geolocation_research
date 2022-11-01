@@ -16,13 +16,14 @@ END_TIME = datetime.datetime(2022, 10, 1)
 RAW_DATA_FILE_NAME = "small_jakarta_sample.csv"
 
 TIME_FRAME_INTERVAL = 180
-WINDOW_SIZE = 3600 
+WINDOW_SIZE = 1800 
 PCA_DIM = 4
 TRAINING_IMSI = '510019860290892'
 ['510018710502489', '510018010344587', '510019860290892', '510017260321620']
 
 # purge result folders
-for folder_path in ['../img/', '../result/', '../splitted_data']:
+# for folder_path in ['../img/', '../result/', '../splitted_data']:
+for folder_path in ['../img/', '../result/']:
     for root, folder, files in os.walk(folder_path):
         for file in files:
             os.remove(os.path.join(root, file))
@@ -34,7 +35,7 @@ time_frame_to_idx_dict = {
         for i in range(math.ceil((END_TIME-START_TIME).total_seconds()/TIME_FRAME_INTERVAL)+1)}
 
 # split raw data by imsi, save data of different imsi in 'splitted_data' seperately
-utils.split_raw_data_by_imsi(f"../data/{RAW_DATA_FILE_NAME}")
+# utils.split_raw_data_by_imsi(f"../data/{RAW_DATA_FILE_NAME}")
 
 
 # training HMM model
@@ -62,6 +63,8 @@ def core_job(imsi):
     try:
         file_path = f"../splitted_data/{imsi}.csv"
         subset = utils.data_parsing(utils.read_raw_data(file_path))
+        subset = subset.loc[subset['start_time'] > START_TIME]
+        subset = subset.loc[subset['start_time'] < END_TIME]
         personal_data, enodeb_to_idx_dict_for_plot = utils.personal_data_processing(
             subset, 
             START_TIME, 
@@ -86,24 +89,31 @@ def core_job(imsi):
                     info = [subset.loc[row_idx, colname] for colname in subset.columns] + [time_frame_key_to_status[key]]
                     w.writerow(info)
             
-            
-        # result visualization
-        orignal_pattern = np.zeros((len(enodeb_to_idx_dict_for_plot), len(time_frame_to_idx_dict), 3))
-        condense_pattern = np.zeros((len(enodeb_to_idx_dict_for_plot), len(personal_data.index), 3))
-
-        for idx_idx in range(len(personal_data.index)):
-            idx = personal_data.index[idx_idx]
-            time_idx = time_frame_to_idx_dict[personal_data['time_frame_key'][idx]]
-            status = personal_data['status'][idx]
-            for enodeb in personal_data['enodebs'][idx]:
-                orignal_pattern[enodeb_to_idx_dict_for_plot[enodeb], time_idx, status] = 1
-                condense_pattern[enodeb_to_idx_dict_for_plot[enodeb], idx_idx, status] = 1
         
+        subset['time_idx'] = [(subset['start_time'].tolist()[i]-START_TIME).total_seconds()/86400 for i in range(len(subset.index))]
+
+
+        # result visualization
+        #### section 1
+        # orignal_pattern = np.zeros((len(enodeb_to_idx_dict_for_plot), len(time_frame_to_idx_dict), 3))
+        # condense_pattern = np.zeros((len(enodeb_to_idx_dict_for_plot), len(personal_data.index), 3))
+        # for idx_idx in range(len(personal_data.index)):
+        #     idx = personal_data.index[idx_idx]
+        #     time_idx = time_frame_to_idx_dict[personal_data['time_frame_key'][idx]]
+        #     status = personal_data['status'][idx]
+        #     for enodeb in personal_data['enodebs'][idx]:
+        #         orignal_pattern[enodeb_to_idx_dict_for_plot[enodeb], time_idx, status] = 1
+        #         condense_pattern[enodeb_to_idx_dict_for_plot[enodeb], idx_idx, status] = 1
+
+        # plt.imsave(f"../img/{imsi}_original_pattern.png", orignal_pattern)
+        # plt.imsave(f"../img/{imsi}_condense_pattern.png", condense_pattern)
+        
+        #### section 2
         display_subset = {'time_idx':[], 'enodeb_idx':[], 'status':[]}
         for idx_idx in range(len(personal_data.index)):
             idx = personal_data.index[idx_idx]
             status = personal_data['status'][idx]
-            time_idx = (personal_data['start_time'].tolist()[idx_idx]-START_TIME).total_seconds()/86400
+            time_idx = (personal_data['time_frame_key'].tolist()[idx_idx]-START_TIME).total_seconds()/86400
             for enodeb in personal_data['enodebs'][idx]:
                 enodeb_idx = enodeb_to_idx_dict_for_plot[enodeb]
                 display_subset['time_idx'].append(time_idx)
@@ -112,15 +122,17 @@ def core_job(imsi):
 
 
         fig, axs = plt.subplots(3,1, sharex=True)
-        sns.scatterplot(data=display_subset, x='start_time', y='enodeb_idx', hue='status', ax=axs[0])
-        sns.lineplot(data=subset, x='time_idx', y='lat_first', ax=axs[1])
-        sns.lineplot(data=subset, x='time_idx', y='lon_first', ax=axs[2])
+        subset['lat_first'] = [(i+6.712175)/(6.712175-5.958071) for i in subset['lat_first']]
+        subset['lon_first'] = [(i-106.448078)/(107.325268-106.448078) for i in subset['lon_first']]
+        sns.scatterplot(data=display_subset, x='time_idx', y='enodeb_idx', hue='status', ax=axs[0], s=5)
+        sns.scatterplot(data=subset, x='time_idx', y='lat_first', ax=axs[1], s=5)
+        sns.scatterplot(data=subset, x='time_idx', y='lon_first', ax=axs[2], s=5)
         # fig.tight_layout()
         plt.savefig(f"../img/{imsi}_latlon.png")
         plt.close()
         # reference: https://datavizpyr.com/seaborn-join-two-plots-with-shared-y-axis/
         
-
+        #### section 3
         # subset['time_idx'] = [(subset['start_time'].tolist()[i]-START_TIME).total_seconds()/86400 for i in range(len(subset.index))]
         # fig, ax1 = plt.subplots()
         # ax1.scatter(subset['time_idx'], subset['lat_first'], color='blue')
@@ -134,16 +146,14 @@ def core_job(imsi):
         # plt.savefig(f"../img/{imsi}_latlon.png")
         # plt.close()
 
-
-        plt.imsave(f"../img/{imsi}_original_pattern.png", orignal_pattern)
-        plt.imsave(f"../img/{imsi}_condense_pattern.png", condense_pattern)
-        plt.plot()
-        sns.lineplot(data = {
-            'idx':[i for i in range(personal_data.shape[0])], 
-            'signal':personal_data['signal']}
-            , x='idx', y='signal')
-        plt.savefig(f"../img/{imsi}_signal.png")
-        plt.close()
+        #### section 4
+        # plt.plot()
+        # sns.lineplot(data = {
+        #     'idx':[i for i in range(personal_data.shape[0])], 
+        #     'signal':personal_data['signal']}
+        #     , x='idx', y='signal')
+        # plt.savefig(f"../img/{imsi}_signal.png")
+        # plt.close()
 
     except Exception as error:
         with open("../result/elimiated_imsi.csv", 'a', newline='') as f:
