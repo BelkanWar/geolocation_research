@@ -9,7 +9,8 @@ matplotlib = "*"
 hmmlearn = "*"
 sklearn = "*"
 seaborn = "*"
-pyqt5 = "*"
+numpy = "*"
+scipy = "*"
 
 [dev-packages]
 

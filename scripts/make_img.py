@@ -31,7 +31,7 @@ print(eigen_vector)
 
 
 fig = plt.figure()
-ax = Axes3D(fig)
+ax = fig.add_subplot(111, projection="3d")
 ax.scatter(data['x'], data['y'], data['z'])
 ax.quiver([0,0], [0,0], [0,0], eigen_vector[0:2, 0]*10, eigen_vector[0:2, 1]*10, eigen_vector[0:2, 2]*10)
 ax.set_xlabel('$X$', fontsize=20)
