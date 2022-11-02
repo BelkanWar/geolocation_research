@@ -1,10 +1,13 @@
 import os
 os.chdir(os.path.dirname(os.path.realpath(__file__)))
 import csv
+import datetime
 
 TARGET_PATH = "../data/small_jakarta_sample.csv"
 SOURCE_PATH = "../data/jakarta_sample.csv"
 SAMPLE_SIZE = 3000
+START_TIME = datetime.datetime(2022, 9, 27)
+END_TIME = datetime.datetime(2022, 9, 29)
 
 if os.path.exists(TARGET_PATH):
     os.remove(TARGET_PATH)
@@ -13,11 +16,16 @@ imsi_count_dict = {}
 
 with open(SOURCE_PATH) as f_read:
     for i in csv.reader(f_read, delimiter='|'):
-        imsi = i[0]
-        if imsi in imsi_count_dict:
-            imsi_count_dict[imsi] += 1
-        else:
-            imsi_count_dict[imsi] = 1
+        try:
+            imsi = i[0]
+            timestamp = datetime.datetime.strptime(i[1], '%Y-%m-%d %H:%M:%S')
+            if START_TIME < timestamp < END_TIME:
+                if imsi in imsi_count_dict:
+                    imsi_count_dict[imsi] += 1
+                else:
+                    imsi_count_dict[imsi] = 1
+        except Exception as error:
+            pass
 
 imsi_count_list = [[imsi, imsi_count_dict[imsi]] for imsi in imsi_count_dict]
 imsi_count_list.sort(key=lambda x:x[1], reverse=True)
