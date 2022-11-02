@@ -5,6 +5,7 @@ import datetime
 import math
 import csv
 import multiprocessing
+import pickle
 import numpy as np
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -12,15 +13,13 @@ import seaborn as sns
 # parameters
 VECTORIZE_METHOD = 'time_frame_base' # options: {enodeb_base, time_frame_base}
 START_TIME = datetime.datetime(2022, 9, 27)
-END_TIME = datetime.datetime(2022, 9, 29)
-DATA_RE_SPLIT = False
+END_TIME = datetime.datetime(2022, 9,29)
+DATA_RE_SPLIT = True
 RAW_DATA_FILE_NAME = "small_jakarta_sample.csv"
 
 TIME_FRAME_INTERVAL = 180
-WINDOW_SIZE = 1800 
+WINDOW_SIZE = 3600
 PCA_DIM = 4
-TRAINING_IMSI = '510019860290892'
-['510018710502489', '510018010344587', '510019860290892', '510017260321620']
 
 # purge result folders
 if DATA_RE_SPLIT:
@@ -44,17 +43,8 @@ if DATA_RE_SPLIT:
     utils.split_raw_data_by_imsi(f"../data/{RAW_DATA_FILE_NAME}")
 
 
-# training HMM model
-training_data = utils.personal_data_processing(
-    utils.data_parsing(utils.read_raw_data(f"../splitted_data/{TRAINING_IMSI}.csv")), 
-    START_TIME, 
-    END_TIME, 
-    TIME_FRAME_INTERVAL, 
-    PCA_DIM, 
-    WINDOW_SIZE, 
-    VECTORIZE_METHOD)[0]
-
-model, reverse_switch = utils.HMM_modeling(training_data)
+# load HMM model
+model, reverse_switch = pickle.load(open("../model/HMM_model.pkl", 'rb'))
 
 
 # predict moving/static status
