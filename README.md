@@ -8,10 +8,11 @@
 ## 參數設定
 1. VECTORIZE_METHOD: 設定使用哪個分析模式，設定為`enodeb_base`會採用向量化enodeb，並計算每個time frame的向量合的方式賦予time frame向量；設定為`time_frame_base`會由PCA直接向量化time frame。目前測試結果顯示`enodeb_base`效果較理想
 2. START_TIME & END_TIME: 原始資料集的可用時間段，必須根據不同資料集設定不同數值。`150men.csv`可設為2022/9/17到2022/9/20. `jakarta_sample.csv`可設為2022/9/28到2022/10/1
-3. RAW_DATA_FILE_NAME: 原始資料集名稱
-4. TIME_FRAME_INTERVAL: time frame的長度，單位是秒
-5. WINDOW_SIZE: 建構PCA所需要的enodeb co-occurrence array的時間窗口寬度，單位是秒。時間窗口是個滑動窗口，在窗口內同一個imsi連線的不同enodebs會被視為共同出現的emodebs，並作為記錄寫入array，作為PCA的input。
-6. PCA_DIM: PCA的principle commonets數量
+3. DATA_RE_SPLIT: 是否要從原始資料集重新抽取資料，如果跟上一次執行時使用的RAW_DATA_FILE一樣，可以設定為False來節省時間
+4. RAW_DATA_FILE_NAME: 原始資料集名稱
+5. TIME_FRAME_INTERVAL: time frame的長度，單位是秒
+6. WINDOW_SIZE: 建構PCA所需要的enodeb co-occurrence array的時間窗口寬度，單位是秒。時間窗口是個滑動窗口，在窗口內同一個imsi連線的不同enodebs會被視為共同出現的emodebs，並作為記錄寫入array，作為PCA的input。
+7. PCA_DIM: PCA的principle commonets數量
 
 ## `imsi`篩選條件
 必須要在time frame有超過30個frame有資料才會被納入分析

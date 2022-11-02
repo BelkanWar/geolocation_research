@@ -13,6 +13,7 @@ import seaborn as sns
 VECTORIZE_METHOD = 'time_frame_base' # options: {enodeb_base, time_frame_base}
 START_TIME = datetime.datetime(2022, 9, 28)
 END_TIME = datetime.datetime(2022, 10, 1)
+DATA_RE_SPLIT = True
 RAW_DATA_FILE_NAME = "small_jakarta_sample.csv"
 
 TIME_FRAME_INTERVAL = 180
@@ -22,8 +23,12 @@ TRAINING_IMSI = '510019860290892'
 ['510018710502489', '510018010344587', '510019860290892', '510017260321620']
 
 # purge result folders
-# for folder_path in ['../img/', '../result/', '../splitted_data']:
-for folder_path in ['../img/', '../result/']:
+if DATA_RE_SPLIT:
+    folder_path_list = ['../img/', '../result/', '../splitted_data']
+else:
+    folder_path_list = ['../img/', '../result/']
+
+for folder_path in folder_path_list:
     for root, folder, files in os.walk(folder_path):
         for file in files:
             os.remove(os.path.join(root, file))
@@ -35,7 +40,8 @@ time_frame_to_idx_dict = {
         for i in range(math.ceil((END_TIME-START_TIME).total_seconds()/TIME_FRAME_INTERVAL)+1)}
 
 # split raw data by imsi, save data of different imsi in 'splitted_data' seperately
-# utils.split_raw_data_by_imsi(f"../data/{RAW_DATA_FILE_NAME}")
+if DATA_RE_SPLIT:
+    utils.split_raw_data_by_imsi(f"../data/{RAW_DATA_FILE_NAME}")
 
 
 # training HMM model
@@ -82,11 +88,12 @@ def core_job(imsi):
 
         with open("../result/output.csv", 'a', newline='') as f:
             w = csv.writer(f)
+            w.writerow([colname for colname, data_type, use_switch in utils.scheme if use_switch]+['moving status'])
 
             for row_idx in subset.index:
                 key = utils.mapping_time_frame_key(subset.loc[row_idx, 'start_time'], START_TIME, TIME_FRAME_INTERVAL)
                 if key in time_frame_key_to_status:
-                    info = [subset.loc[row_idx, colname] for colname in subset.columns] + [time_frame_key_to_status[key]]
+                    info = [subset.loc[row_idx, colname] for colname in subset.columns][:-2] + [time_frame_key_to_status[key]]
                     w.writerow(info)
             
         
@@ -163,6 +170,9 @@ def core_job(imsi):
 if __name__ == '__main__':
     pool = multiprocessing.Pool()
     for idx in range(0, len(imsi_list), 30):
-        pool.map(core_job, imsi_list[idx:idx+30])
+        pool.map_async(core_job, imsi_list[idx:idx+30])
+    
+    pool.close()
+    pool.join()
 
 
