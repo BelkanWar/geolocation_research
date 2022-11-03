@@ -24,7 +24,7 @@ def bootstrapping(data):
 
 data1, data2 = [{'x':[], 'y':[]} for i in range(2)]
 
-if os.path.exitsts("../temp/"):
+if os.path.exists("../temp/") == False:
     os.mkdir("../temp/")
 
 for root, folder, files in os.walk("../temp/"):
@@ -52,7 +52,7 @@ for i in range(SAMPLE_SIZE):
     if PLOT_PDF and i > 9:
         mean_dist1 = bootstrapping(data1['y'])
         mean_dist2 = bootstrapping(data2['y'])
-        sns.kdeplot(data={'y':mean_dist1}, y='y', ax=axs[0])
+        sns.kdeplot(data={'y':np.array(mean_dist1)}, y='y', ax=axs[0])
         sns.kdeplot(data={'y':mean_dist2}, y='y', ax=axs[3])
 
         fig.savefig(f"../temp/{i}_se.png")
