@@ -14,7 +14,7 @@ import seaborn as sns
 VECTORIZE_METHOD = 'time_frame_base' # options: {enodeb_base, time_frame_base}
 START_TIME = datetime.datetime(2022, 9, 27)
 END_TIME = datetime.datetime(2022, 9,29)
-DATA_RE_SPLIT = True
+DATA_RE_SPLIT = False
 RAW_DATA_FILE_NAME = "small_jakarta_sample.csv"
 
 TIME_FRAME_INTERVAL = 180
@@ -78,7 +78,6 @@ def core_job(imsi):
 
         with open("../result/output.csv", 'a', newline='') as f:
             w = csv.writer(f)
-            w.writerow([colname for colname, data_type, use_switch in utils.scheme if use_switch]+['moving status'])
 
             for row_idx in subset.index:
                 key = utils.mapping_time_frame_key(subset.loc[row_idx, 'start_time'], START_TIME, TIME_FRAME_INTERVAL)
@@ -158,6 +157,10 @@ def core_job(imsi):
             w.writerow([imsi])
 
 if __name__ == '__main__':
+    with open("../result/output.csv", 'a', newline='') as f:
+        w = csv.writer(f)
+        w.writerow([colname for colname, data_type, use_switch in utils.scheme if use_switch]+['moving status'])
+
     pool = multiprocessing.Pool()
     for idx in range(0, len(imsi_list), 30):
         pool.map_async(core_job, imsi_list[idx:idx+30])
