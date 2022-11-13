@@ -15,6 +15,7 @@ VECTORIZE_METHOD = 'time_frame_base' # options: {enodeb_base, time_frame_base}
 START_TIME = datetime.datetime(2022, 9, 27)
 END_TIME = datetime.datetime(2022, 9,29)
 DATA_RE_SPLIT = False
+FIX_LATLON = True
 RAW_DATA_FILE_NAME = "small_jakarta_sample.csv"
 
 TIME_FRAME_INTERVAL = 180
@@ -42,6 +43,10 @@ time_frame_to_idx_dict = {
 if DATA_RE_SPLIT:
     utils.split_raw_data_by_imsi(f"../data/{RAW_DATA_FILE_NAME}")
 
+
+#  find global lat-lon range
+if FIX_LATLON:
+    lat_range, lon_range = utils.find_latlon_range(f"../data/{RAW_DATA_FILE_NAME}")
 
 # load HMM model
 model, reverse_switch = pickle.load(open("../model/HMM_model.pkl", 'rb'))
@@ -75,6 +80,7 @@ def core_job(imsi):
 
         # mapping the status back to original dataset
         time_frame_key_to_status = {key:status for key, status in zip(personal_data['time_frame_key'], personal_data['status'])}
+        subset['status'] = [0] * subset.shape[0]
 
         with open("../result/output.csv", 'a', newline='') as f:
             w = csv.writer(f)
@@ -84,6 +90,8 @@ def core_job(imsi):
                 if key in time_frame_key_to_status:
                     info = [subset.loc[row_idx, colname] for colname in subset.columns][:-2] + [time_frame_key_to_status[key]]
                     w.writerow(info)
+                    subset.loc[row_idx, 'status'] = time_frame_key_to_status[key]
+
             
         
         subset['time_idx'] = [(subset['start_time'].tolist()[i]-START_TIME).total_seconds()/86400 for i in range(len(subset.index))]
@@ -118,11 +126,15 @@ def core_job(imsi):
 
 
         fig, axs = plt.subplots(3,1, sharex=True)
-        subset['lat_first'] = [(i+6.712175)/(6.712175-5.958071) for i in subset['lat_first']]
-        subset['lon_first'] = [(i-106.448078)/(107.325268-106.448078) for i in subset['lon_first']]
+        if FIX_LATLON:
+            axs[1].set_ylim(lat_range['min'], lat_range['max'])
+            axs[2].set_ylim(lon_range['min'], lon_range['max'])
+        else:
+            subset['lat_first'] = [(i+6.712175)/(6.712175-5.958071) for i in subset['lat_first']]
+            subset['lon_first'] = [(i-106.448078)/(107.325268-106.448078) for i in subset['lon_first']]
         sns.scatterplot(data=display_subset, x='time_idx', y='enodeb_idx', hue='status', ax=axs[0], s=5)
-        sns.scatterplot(data=subset, x='time_idx', y='lat_first', ax=axs[1], s=5)
-        sns.scatterplot(data=subset, x='time_idx', y='lon_first', ax=axs[2], s=5)
+        sns.scatterplot(data=subset, x='time_idx', y='lat_first', hue='status', ax=axs[1], s=5, legend=False)
+        sns.scatterplot(data=subset, x='time_idx', y='lon_first', hue='status', ax=axs[2], s=5, legend=False)
         # fig.tight_layout()
         plt.savefig(f"../img/{imsi}_latlon.png")
         plt.close()

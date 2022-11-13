@@ -48,6 +48,20 @@ def split_raw_data_by_imsi(file_path):
                 w = csv.writer(f_write)
                 w.writerow(i)
 
+def find_latlon_range(file_path):
+    lat_idx = [i[0] for i in scheme].index('lat_first')
+    lon_idx = [i[0] for i in scheme].index('lon_first')
+    lat_range = {'min':10000, 'max':-10000}
+    lon_range = {'min':10000, 'max':-10000}
+    with open(file_path) as f_read:
+        for i in csv.reader(f_read, delimiter='|'):
+            lat_range['min'] = min(lat_range['min'], float(i[lat_idx]))
+            lat_range['max'] = max(lat_range['max'], float(i[lat_idx]))
+            lon_range['min'] = min(lon_range['min'], float(i[lon_idx]))
+            lon_range['max'] = max(lon_range['max'], float(i[lon_idx]))
+    
+    return [lat_range, lon_range]
+
 def data_parsing(raw_data):
     data = {colname:[] for colname, data_type, use_switch in scheme if use_switch}
 

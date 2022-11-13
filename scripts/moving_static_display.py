@@ -44,7 +44,6 @@ global_lon_range = [
 
 imsi_list = list(data)
 random.shuffle(imsi_list)
-imsi_list = ['510018610002079']+imsi_list
 
 for imsi in imsi_list:
 
@@ -95,7 +94,8 @@ for imsi in imsi_list:
             c=convert_data['moving'][max(0, idx-interval):idx])
         plt.plot(
             convert_data['lon'][max(0, idx-interval):idx], 
-            convert_data['lat'][max(0, idx-interval):idx])
+            convert_data['lat'][max(0, idx-interval):idx],
+            c='black')
         plt.xlim(lon_range)
         plt.ylim(lat_range)
         plt.text(
@@ -105,6 +105,8 @@ for imsi in imsi_list:
             fontdict={'size':20, 'color':'red'})
         plt.pause(0.0001)
     
-    plt.pause(2)
+    # plt.pause(2)
+    plt.ioff()
+    plt.show()
 
 
