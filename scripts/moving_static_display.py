@@ -12,7 +12,7 @@ import pandas as pd
 # parameters
 interval = 100
 new_method = True
-fix_map = True
+fix_map = False
 
 
 with open("../result/output.csv") as f:
@@ -105,8 +105,8 @@ for imsi in imsi_list:
             fontdict={'size':20, 'color':'red'})
         plt.pause(0.0001)
     
-    # plt.pause(2)
-    plt.ioff()
-    plt.show()
+    plt.pause(2)
+    # plt.ioff()
+    # plt.show()
 
 

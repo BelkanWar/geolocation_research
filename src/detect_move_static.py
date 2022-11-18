@@ -14,7 +14,7 @@ import seaborn as sns
 VECTORIZE_METHOD = 'time_frame_base' # options: {enodeb_base, time_frame_base}
 START_TIME = datetime.datetime(2022, 9, 27)
 END_TIME = datetime.datetime(2022, 9,29)
-DATA_RE_SPLIT = False
+DATA_RE_SPLIT = True
 FIX_LATLON = True
 RAW_DATA_FILE_NAME = "small_jakarta_sample.csv"
 
