@@ -16,7 +16,7 @@ START_TIME = datetime.datetime(2022, 9, 27)
 END_TIME = datetime.datetime(2022, 9,29)
 DATA_RE_SPLIT = True
 FIX_LATLON = True
-RAW_DATA_FILE_NAME = "small_jakarta_sample.csv"
+RAW_DATA_FILE_NAME = "jakarta_sample.csv"
 
 TIME_FRAME_INTERVAL = 180
 WINDOW_SIZE = 3600
@@ -88,7 +88,7 @@ def core_job(imsi):
             for row_idx in subset.index:
                 key = utils.mapping_time_frame_key(subset.loc[row_idx, 'start_time'], START_TIME, TIME_FRAME_INTERVAL)
                 if key in time_frame_key_to_status:
-                    info = [subset.loc[row_idx, colname] for colname in subset.columns][:-2] + [time_frame_key_to_status[key]]
+                    info = [subset.loc[row_idx, colname] for colname in subset.columns][:-3] + [time_frame_key_to_status[key]]
                     w.writerow(info)
                     subset.loc[row_idx, 'status'] = time_frame_key_to_status[key]
 
