@@ -32,7 +32,7 @@ for folder_path in folder_path_list:
     for root, folder, files in os.walk(folder_path):
         for file in files:
             os.remove(os.path.join(root, file))
-print('start to split dataset by imsi')
+
 
 # time frame
 time_frame_to_idx_dict = {
@@ -41,6 +41,7 @@ time_frame_to_idx_dict = {
 
 # split raw data by imsi, save data of different imsi in 'splitted_data' seperately
 if DATA_RE_SPLIT:
+    print('start to split dataset by imsi')
     utils.split_raw_data_by_imsi(f"../data/{RAW_DATA_FILE_NAME}")
 
 

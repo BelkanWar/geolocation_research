@@ -44,9 +44,10 @@ def split_raw_data_by_imsi(file_path):
     with open(file_path) as f_read:
         for i in csv.reader(f_read, delimiter='|'):
             imsi = i[imsi_idx]
-            with open(f"../splitted_data/{imsi}.csv", 'a', newline='') as f_write:
-                w = csv.writer(f_write)
-                w.writerow(i)
+            if len(i) == len(scheme):
+                with open(f"../splitted_data/{imsi}.csv", 'a', newline='') as f_write:
+                    w = csv.writer(f_write)
+                    w.writerow(i)
 
 def find_latlon_range(file_path):
     lat_idx = [i[0] for i in scheme].index('lat_first')
@@ -55,10 +56,11 @@ def find_latlon_range(file_path):
     lon_range = {'min':10000, 'max':-10000}
     with open(file_path) as f_read:
         for i in csv.reader(f_read, delimiter='|'):
-            lat_range['min'] = min(lat_range['min'], float(i[lat_idx]))
-            lat_range['max'] = max(lat_range['max'], float(i[lat_idx]))
-            lon_range['min'] = min(lon_range['min'], float(i[lon_idx]))
-            lon_range['max'] = max(lon_range['max'], float(i[lon_idx]))
+            if len(i) == len(scheme):
+                lat_range['min'] = min(lat_range['min'], float(i[lat_idx]))
+                lat_range['max'] = max(lat_range['max'], float(i[lat_idx]))
+                lon_range['min'] = min(lon_range['min'], float(i[lon_idx]))
+                lon_range['max'] = max(lon_range['max'], float(i[lon_idx]))
     
     return [lat_range, lon_range]
 
