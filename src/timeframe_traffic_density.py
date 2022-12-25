@@ -17,7 +17,6 @@ else:
             os.remove(os.path.join(root, file))
 
 
-
 data = pd.read_csv("result/output.csv", index_col=False, usecols=['start_time','lat_first','lon_first','moving status'])
 data['timestamp'] = [datetime.datetime.strptime(i,"%Y-%m-%d %H:%M:%S") for i in data['start_time'].tolist()]
 
