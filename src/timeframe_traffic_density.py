@@ -9,9 +9,14 @@ import matplotlib.pyplot as plt
 
 norm = 'log'
 
-for root, folder, files in os.walk("timeframe_density/"):
-    for file in files:
-        os.remove(os.path.join(root, file))
+if os.path.exists("timeframe_density/"):
+    os.mkdir("timeframe_density/")
+else:
+    for root, folder, files in os.walk("timeframe_density/"):
+        for file in files:
+            os.remove(os.path.join(root, file))
+
+
 
 data = pd.read_csv("result/output.csv", index_col=False, usecols=['start_time','lat_first','lon_first','moving status'])
 data['timestamp'] = [datetime.datetime.strptime(i,"%Y-%m-%d %H:%M:%S") for i in data['start_time'].tolist()]
