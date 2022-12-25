@@ -42,8 +42,16 @@ for T_idx in range(math.ceil((END_TIME-START_TIME).total_seconds()/TIME_FRAME_IN
     
     plt.plot()
     try:
-        plt.contour(contour, cmap='RdGy', norm='log')
+        
+
+        if 'colormap' not in dir():
+            img = plt.contour(contour, norm='log')
+            colormap = plt.get_cmap().colors.copy()
+        else:
+            img = plt.contour(contour, colors=colormap, norm='log')
+
         plt.savefig(f"timeframe_density/timeframe_density_{time_str}.png")
+        
     except Exception:
         print(T_idx, np.sum(contour))
     plt.close()

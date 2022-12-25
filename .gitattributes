@@ -1,1 +1,9 @@
 model/HMM_model.pkl filter=lfs diff=lfs merge=lfs -text
+resources/admin/idn_admbnda_adm1_bps_20200401.dbf filter=lfs diff=lfs merge=lfs -text
+resources/admin/idn_admbnda_adm1_bps_20200401.prj filter=lfs diff=lfs merge=lfs -text
+resources/admin/idn_admbnda_adm1_bps_20200401.sbn filter=lfs diff=lfs merge=lfs -text
+resources/admin/idn_admbnda_adm1_bps_20200401.sbx filter=lfs diff=lfs merge=lfs -text
+resources/admin/idn_admbnda_adm1_bps_20200401.shp filter=lfs diff=lfs merge=lfs -text
+resources/admin/idn_admbnda_adm1_bps_20200401.shp.xml filter=lfs diff=lfs merge=lfs -text
+resources/admin/idn_admbnda_adm1_bps_20200401.shx filter=lfs diff=lfs merge=lfs -text
+resources/admin/idn_admbnda_adm1_bps_20200401.cpg filter=lfs diff=lfs merge=lfs -text
