@@ -9,7 +9,7 @@ import matplotlib.pyplot as plt
 
 norm = 'log'
 
-if os.path.exists("timeframe_density/"):
+if os.path.exists("timeframe_density/") == False:
     os.mkdir("timeframe_density/")
 else:
     for root, folder, files in os.walk("timeframe_density/"):
