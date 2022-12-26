@@ -3,4 +3,5 @@ __pycache__/
 *.csv
 *.json
 *.png
+*.gif
 resources/

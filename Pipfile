@@ -11,6 +11,8 @@ sklearn = "*"
 seaborn = "*"
 numpy = "*"
 scipy = "*"
+pyshp = "*"
+imageio = "*"
 
 [dev-packages]
 

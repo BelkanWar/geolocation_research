@@ -1,11 +1,13 @@
 import os
 import sys
-os.chdir(os.path.dirname(os.path.realpath(__file__)))
-sys.path.append("../src/")
+os.chdir(os.path.dirname(os.path.dirname(os.path.realpath(__file__))))
+sys.path.append("src/")
 import csv
 import datetime
 import matplotlib.pyplot as plt
 import random
+import imageio
+import shapefile
 import pandas as pd
 
 
@@ -15,7 +17,33 @@ new_method = True
 fix_map = False
 
 
-with open("../result/output.csv") as f:
+if os.path.exists("moving_static_display") == False:
+    os.mkdir("moving_static_display")
+    os.mkdir("moving_static_display/temp/")
+else:
+    for root, folder, files in os.walk("moving_static_display"):
+        for file in files:
+            os.remove(os.path.join(root, file))
+
+shape = shapefile.Reader("resources/admin/idn_admbnda_adm1_bps_20200401.shp")
+
+for shapeRecord in shape.shapeRecords():
+    if shapeRecord.record[2] == 'Dki Jakarta':
+        jakarta_shapes = shapeRecord.shape.__geo_interface__['coordinates']
+    elif shapeRecord.record[2] == 'Jawa Barat':
+        barat_shapes = shapeRecord.shape.__geo_interface__['coordinates']
+    elif shapeRecord.record[2] == 'Banten':
+        banten_shapes = shapeRecord.shape.__geo_interface__['coordinates']
+
+jawa_coord = []
+
+for shapes in [jakarta_shapes, barat_shapes, banten_shapes]:
+    shapeCoords_length_list = [[shapeCoord[0], len(shapeCoord[0])] for shapeCoord in shapes]
+    shapeCoords_length_list.sort(key=lambda x:x[1], reverse=True)
+    shapeCoord = shapeCoords_length_list[0][0]
+    jawa_coord.append([[i[0] for i in shapeCoord], [i[1] for i in shapeCoord]])
+
+with open("result/output.csv") as f:
     data = {}
     for i in csv.reader(f):
 
@@ -74,8 +102,8 @@ for imsi in imsi_list:
         if idx >= len(timestamp_list):
             break
     
-    plt.ion()
-    plt.show()
+    # plt.ion()
+    # plt.show()
 
     if fix_map:
         lat_range = global_lat_range
@@ -85,9 +113,14 @@ for imsi in imsi_list:
         lon_range = [min(convert_data['lon']), max(convert_data['lon'])]
     
 
-    for idx in range(1, len(convert_data['timestamp']), 5):
+    for root, folder, files in os.walk("moving_static_display/temp"):
+        for file in files:
+            os.remove(os.path.join(root, file))
+
+    for idx in range(len(convert_data['timestamp'])):
         
-        plt.cla()
+        # plt.cla()
+        plt.plot()
         plt.scatter(
             convert_data['lon'][max(0, idx-interval):idx], 
             convert_data['lat'][max(0, idx-interval):idx], 
@@ -96,6 +129,8 @@ for imsi in imsi_list:
             convert_data['lon'][max(0, idx-interval):idx], 
             convert_data['lat'][max(0, idx-interval):idx],
             c='black')
+        for jawa_X, jawa_Y in jawa_coord:
+            plt.plot(jawa_X, jawa_Y)
         plt.xlim(lon_range)
         plt.ylim(lat_range)
         plt.text(
@@ -103,10 +138,21 @@ for imsi in imsi_list:
             lat_range[0], 
             convert_data['timestamp'][idx].strftime("%Y-%m-%d %H:%M:%S"),
             fontdict={'size':20, 'color':'red'})
-        plt.pause(0.0001)
+        plt.savefig(os.path.join("moving_static_display", "temp", f"{idx}.png"))
+        plt.close()
+        # plt.pause(0.1)
     
-    plt.pause(2)
-    # plt.ioff()
-    # plt.show()
+    # plt.pause(2)
+
+    images = []
+    for root, folder, files in os.walk(os.path.join("moving_static_display", "temp")):
+        for file in files:
+            images.append([int(file.replace(".png", "")), imageio.imread(os.path.join(root,file))])
+    
+    images.sort()
+    images = [i[1] for i in images]
+
+    imageio.mimsave(os.path.join("moving_static_display", f"{imsi}.gif"), images, duration=0.1)
+
 
 
